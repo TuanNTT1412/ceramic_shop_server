@@ -1,6 +1,7 @@
 const express = require('express');
 const rateLimit = require('express-rate-limit');
 const authRoute = require('../modules/auth/auth.route');
+const productRoute = require('../modules/product/product.route');
 
 const router = express.Router();
 
@@ -11,5 +12,7 @@ const authLimiter = rateLimit({
 });
 
 router.use('/auth', authLimiter, authRoute);
+router.use('/products', productRoute);
 
 module.exports = router;
+

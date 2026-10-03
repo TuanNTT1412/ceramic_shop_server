@@ -40,6 +40,39 @@ const createProduct = async (data) => {
     return product
 }
 
+// 2.Cập nhật thông tin chung 1 sản phẩm
+const updateProduct = async (id, data) => {
+    const existing = await prisma.product.findUnique({ where: { id } })
+    if (!existing) {
+        const error = new Error('Không tìm thấy sản phẩm')
+        error.status = 404
+        throw error
+    }
+
+    if (data.categoryId) {
+        const category = await prisma.category.findUnique({ where: { id: data.categoryId } })
+        if (!category) {
+            const error = new Error('Danh mục không tồn tại')
+            error.status = 404
+            throw error
+        }
+    }
+
+    const updated = await prisma.product.update({
+        where: { id },
+        data,
+        include: {
+            category: { select: { id: true, name: true } },
+            variants: {
+                include: { images: true }
+            }
+        }
+    })
+
+    return updated
+}
+
 module.exports = {
-    createProduct
+    createProduct,
+    updateProduct
 }

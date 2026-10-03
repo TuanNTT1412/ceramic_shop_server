@@ -1,30 +1,21 @@
 const { z } = require("zod");
+const { OrderStatus, ShippingProvider, PaymentStatus } = require("@prisma/client");
 
 // 1. Kiểm tra khi Cập nhật tiến độ đơn
 const updateOrderStatusSchema = z.object({
   body: z
     .object({
-      orderStatus: z.enum(
-        [
-          "PENDING",
-          "PROCESSING",
-          "SHIPPING",
-          "READY_FOR_PICKUP",
-          "COMPLETED",
-          "CANCELED",
-        ],
-        { required_error: "Trạng thái đơn hàng không hợp lệ" },
-      ),
-      shippingProvider: z
-        .enum(["GHTK", "VTP", "VNPOST", "AHAMOVE"])
-        .optional()
-        .nullable(),
+      orderStatus: z.nativeEnum(OrderStatus, { 
+        required_error: "Trạng thái đơn hàng không hợp lệ",
+        invalid_type_error: "Trạng thái đơn hàng không hợp lệ"
+      }),
+      shippingProvider: z.nativeEnum(ShippingProvider).optional().nullable(),
       trackingCode: z.string().optional().nullable(),
       cancelReason: z.string().optional().nullable(),
     })
     .superRefine((data, ctx) => {
       // Nếu chọn Đang giao, bắt buộc phải có thông tin vận chuyển
-      if (data.orderStatus === "SHIPPING") {
+      if (data.orderStatus === OrderStatus.SHIPPING) {
         if (!data.shippingProvider || !data.trackingCode) {
           ctx.addIssue({
             code: z.ZodIssueCode.custom,
@@ -34,7 +25,7 @@ const updateOrderStatusSchema = z.object({
         }
       }
       // Nếu Hủy đơn, bắt buộc phải có lý do
-      if (data.orderStatus === "CANCELED") {
+      if (data.orderStatus === OrderStatus.CANCELED) {
         if (!data.cancelReason || data.cancelReason.trim() === "") {
           ctx.addIssue({
             code: z.ZodIssueCode.custom,
@@ -49,8 +40,9 @@ const updateOrderStatusSchema = z.object({
 // 2. Kiểm tra khi Xác nhận thanh toán
 const updatePaymentStatusSchema = z.object({
   body: z.object({
-    paymentStatus: z.enum(["UNPAID", "PAID"], {
+    paymentStatus: z.nativeEnum(PaymentStatus, {
       required_error: "Trạng thái thanh toán không hợp lệ",
+      invalid_type_error: "Trạng thái thanh toán không hợp lệ",
     }),
   }),
 });

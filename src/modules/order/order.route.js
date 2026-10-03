@@ -12,21 +12,21 @@ const router = express.Router();
 // ==========================================
 const adminAuth = [authenticate, authorize(Role.STAFF, Role.ADMIN)];
 
-router.get("/admin", adminAuth, orderController.getAdminOrders);
-router.get("/admin/:id", adminAuth, orderController.getAdminOrderDetails);
+router.get("/admin", adminAuth, orderController.getAllOrders);
+router.get("/admin/:id", adminAuth, orderController.getOrderDetail);
 
 router.patch(
   "/admin/:id/status",
   adminAuth,
   validate(orderValidation.updateOrderStatusSchema),
-  orderController.updateAdminOrderStatus,
+  orderController.updateOrderStatus,
 );
 
 router.patch(
   "/admin/:id/payment",
   adminAuth,
   validate(orderValidation.updatePaymentStatusSchema),
-  orderController.updateAdminPaymentStatus,
+  orderController.updatePaymentStatus,
 );
 
 module.exports = router;

@@ -1,7 +1,7 @@
 const { PrismaClient } = require("@prisma/client");
 const prisma = new PrismaClient();
 
-const getAdminOrders = async () => {
+const getAllOrders = async () => {
   const orders = await prisma.order.findMany({
     orderBy: { createdAt: "desc" },
     include: {
@@ -12,7 +12,7 @@ const getAdminOrders = async () => {
   return orders;
 };
 
-const getAdminOrderById = async (id) => {
+const getOrderDetail = async (id) => {
   const order = await prisma.order.findUnique({
     where: { id },
     include: {
@@ -30,9 +30,9 @@ const getAdminOrderById = async (id) => {
   return order;
 };
 
-const updateAdminOrderStatus = async (id, data) => {
+const updateOrderStatus = async (id, data) => {
   // 1. Kéo đơn hàng lên trước để đối chiếu
-  const order = await getAdminOrderById(id);
+  const order = await getOrderDetail(id);
 
   // 2. Kiểm tra nghiệp vụ: READY_FOR_PICKUP chỉ dành cho đơn lấy tại cửa hàng
   if (
@@ -55,9 +55,9 @@ const updateAdminOrderStatus = async (id, data) => {
   return updatedOrder;
 };
 
-const updateAdminPaymentStatus = async (id, paymentStatus) => {
+const updatePaymentStatus = async (id, paymentStatus) => {
   // Kéo lên để đảm bảo ID có thật
-  await getAdminOrderById(id);
+  await getOrderDetail(id);
 
   const updatedOrder = await prisma.order.update({
     where: { id },
@@ -68,8 +68,8 @@ const updateAdminPaymentStatus = async (id, paymentStatus) => {
 };
 
 module.exports = {
-  getAdminOrders,
-  getAdminOrderById,
-  updateAdminOrderStatus,
-  updateAdminPaymentStatus,
+  getAllOrders,
+  getOrderDetail,
+  updateOrderStatus,
+  updatePaymentStatus,
 };

@@ -1,8 +1,8 @@
 const orderService = require("./order.service");
 
-const getAdminOrders = async (req, res, next) => {
+const getAllOrders = async (req, res, next) => {
   try {
-    const orders = await orderService.getAdminOrders();
+    const orders = await orderService.getAllOrders();
 
     res.status(200).json({
       success: true,
@@ -13,9 +13,9 @@ const getAdminOrders = async (req, res, next) => {
   }
 };
 
-const getAdminOrderDetails = async (req, res, next) => {
+const getOrderDetail = async (req, res, next) => {
   try {
-    const order = await orderService.getAdminOrderById(req.params.id);
+    const order = await orderService.getOrderDetail(req.params.id);
 
     res.status(200).json({
       success: true,
@@ -26,9 +26,9 @@ const getAdminOrderDetails = async (req, res, next) => {
   }
 };
 
-const updateAdminOrderStatus = async (req, res, next) => {
+const updateOrderStatus = async (req, res, next) => {
   try {
-    const order = await orderService.updateAdminOrderStatus(
+    const order = await orderService.updateOrderStatus(
       req.params.id,
       req.body,
     );
@@ -42,10 +42,10 @@ const updateAdminOrderStatus = async (req, res, next) => {
   }
 };
 
-const updateAdminPaymentStatus = async (req, res, next) => {
+const updatePaymentStatus = async (req, res, next) => {
   try {
     const { paymentStatus } = req.body;
-    const order = await orderService.updateAdminPaymentStatus(
+    const order = await orderService.updatePaymentStatus(
       req.params.id,
       paymentStatus,
     );
@@ -60,8 +60,8 @@ const updateAdminPaymentStatus = async (req, res, next) => {
 };
 
 module.exports = {
-  getAdminOrders,
-  getAdminOrderDetails,
-  updateAdminOrderStatus,
-  updateAdminPaymentStatus,
+  getAllOrders,
+  getOrderDetail,
+  updateOrderStatus,
+  updatePaymentStatus,
 };

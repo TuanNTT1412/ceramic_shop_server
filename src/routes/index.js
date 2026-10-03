@@ -1,9 +1,7 @@
 const express = require("express");
 const rateLimit = require("express-rate-limit");
 const authRoute = require("../modules/auth/auth.route");
-const adminOrderRoute = require("../modules/order/order.admin.route");
-
-const { authenticate, authorize } = require("../middlewares/auth.middleware");
+const orderRoute = require("../modules/order/order.route");
 
 const router = express.Router();
 
@@ -14,11 +12,6 @@ const authLimiter = rateLimit({
 });
 
 router.use("/auth", authLimiter, authRoute);
-router.use(
-  "/admin/orders",
-  authenticate,
-  authorize("STAFF", "ADMIN"),
-  adminOrderRoute,
-);
+router.use("/orders", orderRoute);
 
 module.exports = router;

@@ -1,0 +1,32 @@
+const express = require("express");
+const orderController = require("./order.controller");
+const validate = require("../../middlewares/validate.middleware");
+const orderValidation = require("./order.validation");
+const { authenticate, authorize } = require("../../middlewares/auth.middleware");
+const { Role } = require("@prisma/client");
+
+const router = express.Router();
+
+// ==========================================
+// NHÓM 1: DÀNH CHO ADMIN & STAFF
+// ==========================================
+const adminAuth = [authenticate, authorize(Role.STAFF, Role.ADMIN)];
+
+router.get("/admin", adminAuth, orderController.getAdminOrders);
+router.get("/admin/:id", adminAuth, orderController.getAdminOrderDetails);
+
+router.patch(
+  "/admin/:id/status",
+  adminAuth,
+  validate(orderValidation.updateOrderStatusSchema),
+  orderController.updateAdminOrderStatus,
+);
+
+router.patch(
+  "/admin/:id/payment",
+  adminAuth,
+  validate(orderValidation.updatePaymentStatusSchema),
+  orderController.updateAdminPaymentStatus,
+);
+
+module.exports = router;

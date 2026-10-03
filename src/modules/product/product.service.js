@@ -124,9 +124,65 @@ const updateVariant = async (variantId, data) => {
     return updated
 }
 
+// 5.Thêm mới ảnh cho phân loại sản phẩm
+const createVariantImage = async (variantId, data) => {
+    const variant = await prisma.productVariant.findUnique({ where: { id: variantId } })
+    if (!variant) {
+        const error = new Error('Không tìm thấy phân loại sản phẩm')
+        error.status = 404
+        throw error
+    }
+
+    // Nếu ảnh mới là ảnh chính, cập nhật các ảnh khác cùng variant này về false
+    if (data.isPrimary) {
+        await prisma.variantImage.updateMany({
+            where: { variantId },
+            data: { isPrimary: false }
+        })
+    }
+
+    const newImage = await prisma.variantImage.create({
+        data: {
+            variantId,
+            imageUrl: data.imageUrl,
+            isPrimary: data.isPrimary ?? false,
+            displayOrder: data.displayOrder ?? 0
+        }
+    })
+
+    return newImage
+}
+
+// 6.Thay thế ảnh cho phân loại
+const updateVariantImage = async (imageId, data) => {
+    const existing = await prisma.variantImage.findUnique({ where: { id: imageId } })
+    if (!existing) {
+        const error = new Error('Không tìm thấy hình ảnh')
+        error.status = 404
+        throw error
+    }
+
+    // Nếu cập nhật thành ảnh chính, chuyển các ảnh khác cùng variant về false
+    if (data.isPrimary) {
+        await prisma.variantImage.updateMany({
+            where: { variantId: existing.variantId },
+            data: { isPrimary: false }
+        })
+    }
+
+    const updated = await prisma.variantImage.update({
+        where: { id: imageId },
+        data
+    })
+
+    return updated
+}
+
 module.exports = {
     createProduct,
     updateProduct,
     createVariant,
-    updateVariant
+    updateVariant,
+    createVariantImage,
+    updateVariantImage
 }

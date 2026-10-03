@@ -178,11 +178,70 @@ const updateVariantImage = async (imageId, data) => {
     return updated
 }
 
+// 7.Tìm kiếm theo tên / mã sản phẩm và bộ lọc danh mục để hiển thị danh sách sản phẩm
+const getProducts = async (query) => {
+    const { search, categoryId, isActive } = query
+    const page = Math.max(1, parseInt(query.page, 10) || 1)
+    const limit = Math.max(1, parseInt(query.limit, 10) || 10)
+    const skip = (page - 1) * limit
+
+    const where = {}
+
+    // Tìm kiếm theo tên HOẶC mã sản phẩm 
+    if (search && search.trim() !== '') {
+        where.OR = [
+            { name: { contains: search.trim(), mode: 'insensitive' } },
+            { id: { equals: search.trim() } }
+        ]
+    }
+
+    // Lọc theo danh mục
+    if (categoryId && categoryId.trim() !== '') {
+        where.categoryId = categoryId.trim()
+    }
+
+    // Lọc theo trạng thái kinh doanh(trạng thái hiển thị)
+    if (isActive !== undefined && isActive !== '') {
+        where.isActive = isActive === 'true' || isActive === true
+    }
+
+    const [total, products] = await Promise.all([
+        prisma.product.count({ where }),
+        prisma.product.findMany({
+            where,
+            skip,
+            take: limit,
+            include: {
+                category: {
+                    select: { id: true, name: true }
+                },
+                variants: {
+                    include: {
+                        images: {
+                            orderBy: { displayOrder: 'asc' }
+                        }
+                    }
+                }
+            },
+            orderBy: { createdAt: 'desc' }
+        })
+    ])
+
+    return {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+        products
+    }
+}
+
 module.exports = {
     createProduct,
     updateProduct,
     createVariant,
     updateVariant,
     createVariantImage,
-    updateVariantImage
+    updateVariantImage,
+    getProducts
 }

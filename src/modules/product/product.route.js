@@ -1,65 +1,68 @@
-const router = require('express').Router()
+const express = require('express')
 const productController = require('./product.controller')
 const validate = require('../../middlewares/validate.middleware')
+const productValidation = require('./product.validation')
 const { authenticate, authorize } = require('../../middlewares/auth.middleware')
-const {
-    createProductSchema,
-    updateProductSchema,
-    createVariantSchema,
-    updateVariantSchema,
-    createImageSchema,
-    updateImageSchema
-} = require('./product.validation')
+const { Role } = require('@prisma/client')
 
-// Route xem danh sách sản phẩm
+const router = express.Router()
+
+// ==========================================
+// NHÓM: DÀNH CHO ADMIN & STAFF
+// ==========================================
+const adminAuth = [authenticate, authorize(Role.STAFF, Role.ADMIN)]
+
+// ==========================================
+// 1. PUBLIC ROUTES (DÀNH CHO KHÁCH HÀNG & TẤT CẢ MỌI NGƯỜI)
+// ==========================================
+// Khách hàng chỉ xem sản phẩm đang kinh doanh
 router.get('/', productController.getProducts)
 
-// Các route liên quan đến chức năng  sản phẩm 
+// ==========================================
+// 2. PROTECTED ROUTES (DÀNH CHO ADMIN & STAFF)
+// ==========================================
+// Admin & Staff xem toàn bộ sản phẩm (kèm bộ lọc trạng thái ẩn/hiện)
+router.get('/admin', adminAuth, productController.getAdminProducts)
+
 router.post(
     '/',
-    authenticate,
-    authorize('ADMIN', 'STAFF'),
-    validate(createProductSchema),
+    adminAuth,
+    validate(productValidation.createProductSchema),
     productController.createProduct
 )
 
 router.patch(
     '/:id',
-    authenticate,
-    authorize('ADMIN', 'STAFF'),
-    validate(updateProductSchema),
+    adminAuth,
+    validate(productValidation.updateProductSchema),
     productController.updateProduct
 )
 
 router.post(
     '/:id/variants',
-    authenticate,
-    authorize('ADMIN', 'STAFF'),
-    validate(createVariantSchema),
+    adminAuth,
+    validate(productValidation.createVariantSchema),
     productController.createVariant
 )
 
 router.patch(
     '/variants/:variantId',
-    authenticate,
-    authorize('ADMIN', 'STAFF'),
-    validate(updateVariantSchema),
+    adminAuth,
+    validate(productValidation.updateVariantSchema),
     productController.updateVariant
 )
 
 router.post(
     '/variants/:variantId/images',
-    authenticate,
-    authorize('ADMIN', 'STAFF'),
-    validate(createImageSchema),
+    adminAuth,
+    validate(productValidation.createImageSchema),
     productController.createVariantImage
 )
 
 router.patch(
     '/images/:imageId',
-    authenticate,
-    authorize('ADMIN', 'STAFF'),
-    validate(updateImageSchema),
+    adminAuth,
+    validate(productValidation.updateImageSchema),
     productController.updateVariantImage
 )
 

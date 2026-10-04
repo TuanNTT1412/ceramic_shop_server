@@ -178,16 +178,18 @@ const updateVariantImage = async (imageId, data) => {
     return updated
 }
 
-// 7.Tìm kiếm theo tên / mã sản phẩm và bộ lọc danh mục để hiển thị danh sách sản phẩm
+// 7.Dành cho khách hàng: Chỉ xem sản phẩm đang kinh doanh
 const getProducts = async (query) => {
-    const { search, categoryId, isActive } = query
+    const { search, categoryId } = query
     const page = Math.max(1, parseInt(query.page, 10) || 1)
     const limit = Math.max(1, parseInt(query.limit, 10) || 10)
     const skip = (page - 1) * limit
 
-    const where = {}
+    const where = {
+        isActive: true
+    }
 
-    // Tìm kiếm theo tên HOẶC mã sản phẩm 
+    // Tìm kiếm theo tên hoặc mã sản phẩm 
     if (search && search.trim() !== '') {
         where.OR = [
             { name: { contains: search.trim(), mode: 'insensitive' } },
@@ -200,7 +202,60 @@ const getProducts = async (query) => {
         where.categoryId = categoryId.trim()
     }
 
-    // Lọc theo trạng thái kinh doanh(trạng thái hiển thị)
+    const [total, products] = await Promise.all([
+        prisma.product.count({ where }),
+        prisma.product.findMany({
+            where,
+            skip,
+            take: limit,
+            include: {
+                category: {
+                    select: { id: true, name: true }
+                },
+                variants: {
+                    include: {
+                        images: {
+                            orderBy: { displayOrder: 'asc' }
+                        }
+                    }
+                }
+            },
+            orderBy: { createdAt: 'desc' }
+        })
+    ])
+
+    return {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+        products
+    }
+}
+
+// 8.Dành cho admin và staff: Xem tất cả sản phẩm 
+const getAdminProducts = async (query) => {
+    const { search, categoryId, isActive } = query
+    const page = Math.max(1, parseInt(query.page, 10) || 1)
+    const limit = Math.max(1, parseInt(query.limit, 10) || 10)
+    const skip = (page - 1) * limit
+
+    const where = {}
+
+    // Tìm kiếm theo tên hoặc mã sản phẩm 
+    if (search && search.trim() !== '') {
+        where.OR = [
+            { name: { contains: search.trim(), mode: 'insensitive' } },
+            { id: { equals: search.trim() } }
+        ]
+    }
+
+    // Lọc theo danh mục
+    if (categoryId && categoryId.trim() !== '') {
+        where.categoryId = categoryId.trim()
+    }
+
+    // Admin có thể chọn lọc theo trạng thái hoặc bỏ trống để xem tất cả
     if (isActive !== undefined && isActive !== '') {
         where.isActive = isActive === 'true' || isActive === true
     }
@@ -243,5 +298,6 @@ module.exports = {
     updateVariant,
     createVariantImage,
     updateVariantImage,
-    getProducts
+    getProducts,
+    getAdminProducts
 }

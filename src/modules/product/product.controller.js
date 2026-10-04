@@ -63,6 +63,15 @@ const getProducts = async (req, res, next) => {
     }
 }
 
+const getAdminProducts = async (req, res, next) => {
+    try {
+        const result = await productService.getAdminProducts(req.query)
+        res.json({ success: true, data: result })
+    } catch (err) {
+        next(err)
+    }
+}
+
 module.exports = {
     createProduct,
     updateProduct,
@@ -70,6 +79,7 @@ module.exports = {
     updateVariant,
     createVariantImage,
     updateVariantImage,
-    getProducts
+    getProducts,
+    getAdminProducts
 }
 

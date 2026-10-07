@@ -97,8 +97,18 @@ git commit -m "Fix conflicts with main"
 
 **Bước 5: Đưa code lên nhánh `main`**
 
+Chọn 1 trong 2 cách sau:
+
+**Cách 1: Sử dụng Git Command (Terminal)**
 ```bash
 git checkout main
 git merge <tên_nhánh_phụ>
 git push origin main
 ```
+
+**Cách 2: Sử dụng GitHub Pull Request (Khuyên dùng)**
+- Push nhánh phụ lên GitHub bằng lệnh: `git push origin <tên_nhánh_phụ>`
+- Truy cập trang kho lưu trữ (repository) trên GitHub.
+- Bấm nút **Compare & pull request** màu xanh lá.
+- Kiểm tra thay đổi và bấm **Create pull request**.
+- Bấm **Merge pull request** để hoàn tất việc hợp nhất vào `main`.

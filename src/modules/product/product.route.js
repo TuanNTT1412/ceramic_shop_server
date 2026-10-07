@@ -22,7 +22,7 @@ router.get('/', productController.getProducts)
 // 2. PROTECTED ROUTES (DÀNH CHO ADMIN & STAFF)
 // ==========================================
 // Admin & Staff xem toàn bộ sản phẩm (kèm bộ lọc trạng thái ẩn/hiện)
-router.get('/admin', adminAuth, productController.getAdminProducts)
+router.get('/admin', adminAuth, productController.getProductsForAdmin)
 
 router.post(
     '/',

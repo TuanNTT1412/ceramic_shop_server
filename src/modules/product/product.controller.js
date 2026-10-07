@@ -63,9 +63,9 @@ const getProducts = async (req, res, next) => {
     }
 }
 
-const getAdminProducts = async (req, res, next) => {
+const getProductsForAdmin = async (req, res, next) => {
     try {
-        const result = await productService.getAdminProducts(req.query)
+        const result = await productService.getProductsForAdmin(req.query)
         res.json({ success: true, data: result })
     } catch (err) {
         next(err)
@@ -80,6 +80,6 @@ module.exports = {
     createVariantImage,
     updateVariantImage,
     getProducts,
-    getAdminProducts
+    getProductsForAdmin
 }
 

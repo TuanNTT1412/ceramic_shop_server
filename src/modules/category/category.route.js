@@ -14,8 +14,8 @@ router.get('/', categoryController.getAllCategories);
 router.get('/:id', categoryController.getByCategoryId);
 
 // Only authenticated users can create, update, or delete categories
-router.post('/', authenticate, adminAuth, validate(createCategorySchema), categoryController.createCategory);
-router.put('/:id', authenticate, adminAuth, validate(updateCategorySchema), categoryController.updateByCategoryId);
-router.delete('/:id', authenticate, adminAuth, categoryController.removeCategory);
+router.post('/', adminAuth, validate(createCategorySchema), categoryController.createCategory);
+router.put('/:id', adminAuth, validate(updateCategorySchema), categoryController.updateByCategoryId);
+router.delete('/:id', adminAuth, categoryController.removeCategory);
 
 module.exports = router;

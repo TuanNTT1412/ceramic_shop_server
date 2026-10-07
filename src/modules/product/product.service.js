@@ -234,7 +234,7 @@ const getProducts = async (query) => {
 }
 
 // 8.Dành cho admin và staff: Xem tất cả sản phẩm 
-const getAdminProducts = async (query) => {
+const getProductsForAdmin = async (query) => {
     const { search, categoryId, isActive } = query
     const page = Math.max(1, parseInt(query.page, 10) || 1)
     const limit = Math.max(1, parseInt(query.limit, 10) || 10)
@@ -299,5 +299,5 @@ module.exports = {
     createVariantImage,
     updateVariantImage,
     getProducts,
-    getAdminProducts
+    getProductsForAdmin
 }

@@ -10,12 +10,12 @@ const router = express.Router();
 const adminAuth = [authenticate, authorize(Role.STAFF, Role.ADMIN)];
 
 // Any unauthenticated user can view categories
-router.get('/', categoryController.getAllCategories);
-router.get('/:id', categoryController.getByCategoryId);
+router.get('/', categoryController.getCategories);
+router.get('/:id', categoryController.getCategoryDetail);
 
 // Only authenticated users can create, update, or delete categories
 router.post('/', adminAuth, validate(createCategorySchema), categoryController.createCategory);
-router.put('/:id', adminAuth, validate(updateCategorySchema), categoryController.updateByCategoryId);
-router.delete('/:id', adminAuth, categoryController.removeCategory);
+router.put('/:id', adminAuth, validate(updateCategorySchema), categoryController.updateCategory);
+router.delete('/:id', adminAuth, categoryController.deleteCategory);
 
 module.exports = router;

@@ -12,14 +12,14 @@ const createCategory    = async (data) => {
 }
 
 // 2. Get all categories
-const getAllCategories = async () => {
+const getCategories = async () => {
     return await prisma.category.findMany({
         orderBy: { createdAt: 'desc' }
     });
 }
 
 // 3. Get a category by ID
-const getByCategoryId = async (id) => {
+const getCategoryDetail = async (id) => {
     const category = await prisma.category.findUnique({ where: { id } });
     if (!category) {
         const error = new Error('Danh mục không tồn tại');
@@ -30,8 +30,8 @@ const getByCategoryId = async (id) => {
 };
 
 // 4. Update a category by ID
-const updateByCategoryId = async (id, data) => {
-    await getByCategoryId(id); // Check if category exists
+const updateCategory = async (id, data) => {
+    await getCategoryDetail(id); // Check if category exists
     return await prisma.category.update({
         where: { id },
         data
@@ -39,8 +39,8 @@ const updateByCategoryId = async (id, data) => {
 }
 
 // 5. Delete a category by ID
-const removeCategory = async (id) => {
-    await getByCategoryId(id); // Check if category exists
+const deleteCategory = async (id) => {
+    await getCategoryDetail(id); // Check if category exists
     return await prisma.category.delete({ where: { id } });
 }
-module.exports = { createCategory, getAllCategories, getByCategoryId, updateByCategoryId, removeCategory };
+module.exports = { createCategory, getCategories, getCategoryDetail, updateCategory, deleteCategory };

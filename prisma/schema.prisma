@@ -29,6 +29,7 @@ model User {
   refreshTokens RefreshToken[]
   addresses     UserAddress[]
   orders        Order[]
+  cart          Cart?
 }
 
 model RefreshToken {
@@ -89,6 +90,7 @@ model ProductVariant {
 
   images       VariantImage[]
   orderDetails OrderDetail[]
+  cartItems     CartItem[]
 }
 
 model VariantImage {
@@ -183,4 +185,31 @@ model OrderDetail {
   unitPrice      Int
   quantity       Int
   subTotal       Int
+}
+
+// ==========================================
+// 4. GIỎ HÀNG (CART)
+// ==========================================
+model Cart {
+  id        String     @id @default(uuid())
+  userId    String     @unique // Đảm bảo quan hệ 1-1: Mỗi user 1 giỏ hàng
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  cartItems CartItem[]
+}
+
+model CartItem {
+  id        String         @id @default(uuid())
+  cartId    String
+  cart      Cart           @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  variantId String
+  variant   ProductVariant @relation(fields: [variantId], references: [id], onDelete: Cascade)
+  quantity  Int            @default(1)
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+
+  // ĐỀ XUẤT THÊM: Chống trùng lặp sản phẩm trong cùng 1 giỏ hàng
+  @@unique([cartId, variantId]) 
 }

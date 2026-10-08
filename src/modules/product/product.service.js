@@ -215,7 +215,8 @@ const getProducts = async (query) => {
                 variants: {
                     include: {
                         images: {
-                            orderBy: { displayOrder: 'asc' }
+                            where: { isPrimary: true },
+                            take: 1
                         }
                     }
                 }
@@ -233,6 +234,47 @@ const getProducts = async (query) => {
     }
 }
 
+const getProductDetail = async (productId) => {
+    const product = await prisma.product.findFirst({
+        where: { 
+            id: productId,
+            isActive: true
+         },
+
+         select: {
+            id: true,
+            name: true,
+            description: true,
+            category: {
+                select: { id: true, name: true }
+            },
+            variants: {
+                select: {
+                    id: true,
+                    variantName: true,
+                    price: true,
+                    stockQuantity: true,
+                    images: {
+                        select: {
+                            id: true,
+                            imageUrl: true,
+                            isPrimary: true,
+                        },
+                        orderBy: { displayOrder: 'asc' }
+                    }
+                }
+            }
+        }
+    }); 
+
+    if (!product) {
+        const error = new Error('Không tìm thấy sản phẩm hoặc sản phẩm không còn kinh doanh')
+        error.status = 404
+        throw error;
+    }
+
+    return product;
+};
 // 8.Dành cho admin và staff: Xem tất cả sản phẩm 
 const getProductsForAdmin = async (query) => {
     const { search, categoryId, isActive } = query
@@ -299,5 +341,6 @@ module.exports = {
     createVariantImage,
     updateVariantImage,
     getProducts,
+    getProductDetail,
     getProductsForAdmin
 }

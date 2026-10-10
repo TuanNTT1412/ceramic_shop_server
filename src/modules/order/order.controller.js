@@ -59,9 +59,43 @@ const updatePaymentStatus = async (req, res, next) => {
   }
 };
 
+// ==========================================
+// DÀNH CHO KHÁCH HÀNG (CUSTOMER)
+// ==========================================
+const getMyOrders = async (req, res, next) => {
+  try {
+    const orders = await orderService.getMyOrders(req.user.id, req.query);
+
+    res.status(200).json({
+      success: true,
+      data: orders,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+const getMyOrderDetail = async (req, res, next) => {
+  try {
+    const order = await orderService.getMyOrderDetail(
+      req.user.id,
+      req.params.id,
+    );
+
+    res.status(200).json({
+      success: true,
+      data: order,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   getAllOrders,
   getOrderDetail,
   updateOrderStatus,
   updatePaymentStatus,
+  getMyOrders,
+  getMyOrderDetail,
 };

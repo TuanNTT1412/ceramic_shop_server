@@ -67,9 +67,91 @@ const updatePaymentStatus = async (id, paymentStatus) => {
   return updatedOrder;
 };
 
+// ==========================================
+// DÀNH CHO KHÁCH HÀNG (CUSTOMER)
+// ==========================================
+const getMyOrders = async (userId, query = {}) => {
+  const { search, orderStatus, paymentStatus } = query;
+  const where = { customerId: userId };
+
+  if (orderStatus) {
+    where.orderStatus = orderStatus;
+  }
+
+  if (paymentStatus) {
+    where.paymentStatus = paymentStatus;
+  }
+
+  // Tìm kiếm theo mã đơn hàng HOẶC tên món hàng đã mua
+  if (search && search.trim() !== "") {
+    const keyword = search.trim();
+    where.OR = [
+      { orderCode: { contains: keyword, mode: "insensitive" } },
+      {
+        orderDetails: {
+          some: {
+            productName: { contains: keyword, mode: "insensitive" },
+          },
+        },
+      },
+    ];
+  }
+
+  const orders = await prisma.order.findMany({
+    where,
+    orderBy: { createdAt: "desc" },
+    include: {
+      orderDetails: {
+        include: {
+          variant: {
+            include: {
+              images: {
+                where: { isPrimary: true },
+                take: 1,
+              },
+            },
+          },
+        },
+      },
+    },
+  });
+
+  return orders;
+};
+
+const getMyOrderDetail = async (userId, orderId) => {
+  const order = await prisma.order.findFirst({
+    where: {
+      id: orderId,
+      customerId: userId, // Chỉ cho phép xem đơn của chính mình
+    },
+    include: {
+      orderDetails: {
+        include: {
+          variant: {
+            include: {
+              images: true,
+            },
+          },
+        },
+      },
+    },
+  });
+
+  if (!order) {
+    const error = new Error("Không tìm thấy đơn hàng");
+    error.status = 404;
+    throw error;
+  }
+
+  return order;
+};
+
 module.exports = {
   getAllOrders,
   getOrderDetail,
   updateOrderStatus,
   updatePaymentStatus,
+  getMyOrders,
+  getMyOrderDetail,
 };

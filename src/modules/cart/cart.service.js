@@ -103,3 +103,141 @@ const getMyCart = async (userId) => {
         totalPrice,
     };
 };
+
+// 2. THÊM SẢN PHẨM VÀO GIỎ HÀNG
+const addToCart = async (userId, data) => {
+    const { variantId, quantity = 1 } = data;
+
+    //Kiểm tra biến thể và sản phẩm cha có đang hoạt động không
+    const variant = await prisma.productVariant.findUnique({
+        where: { id: variantId },
+        include: { product: true },
+    });
+
+    if (!variant) {
+        const error = new Error("Không tìm thấy phân loại sản phẩm");
+        error.status = 404;
+        throw error;
+    }
+
+    if (!variant.product.isActive) {
+        const error = new Error("Sản phẩm đã ngừng kinh doanh hoặc đang bị ẩn");
+        error.status = 400;
+        throw error;
+    }
+
+    const cart = await findOrCreateCart(userId);
+
+    //Kiểm tra sản phẩm đã có trong giỏ chưa để tính tổng số lượng
+    const existingItem = await prisma.cartItem.findUnique({
+        where: {
+            cartId_variantId: {
+                cartId: cart.id,
+                variantId,
+            },
+        },
+    });
+
+    const currentQuantity = existingItem ? existingItem.quantity : 0;
+    const newQuantity = currentQuantity + quantity;
+
+    //Ràng buộc tồn kho
+    if (newQuantity > variant.stockQuantity) {
+        const error = new Error(
+            `Số lượng yêu cầu (${newQuantity}) vượt quá số lượng còn lại trong kho (${variant.stockQuantity})`,
+        );
+        error.status = 400;
+        throw error;
+    }
+
+    //Chèn dữ liệu an toàn (cộng dồn nếu đã có, tạo mới nếu chưa)
+    const cartItem = await prisma.cartItem.upsert({
+        where: {
+            cartId_variantId: {
+                cartId: cart.id,
+                variantId,
+            },
+        },
+        update: {
+            quantity: newQuantity,
+        },
+        create: {
+            cartId: cart.id,
+            variantId,
+            quantity,
+        },
+        include: {
+            variant: {
+                include: {
+                    product: { select: { id: true, name: true, isActive: true } },
+                },
+            },
+        },
+    });
+
+    return cartItem;
+};
+
+// 3. CẬP NHẬT SỐ LƯỢNG MÓN HÀNG TRONG GIỎ
+const updateCartItem = async (userId, itemId, data) => {
+    const { quantity } = data;
+
+    // Kiểm tra quyền sở hữu giỏ hàng
+    const item = await prisma.cartItem.findUnique({
+        where: { id: itemId },
+        include: {
+            cart: true,
+            variant: {
+                include: { product: true },
+            },
+        },
+    });
+
+    if (!item || item.cart.userId !== userId) {
+        const error = new Error("Không tìm thấy sản phẩm trong giỏ hàng");
+        error.status = 404;
+        throw error;
+    }
+
+    // Nếu số lượng giảm về 0: Tự động xóa khỏi giỏ hàng
+    if (quantity <= 0) {
+        await prisma.cartItem.delete({
+            where: { id: itemId },
+        });
+        return {
+            message: "Đã xóa sản phẩm khỏi giỏ hàng",
+            deleted: true,
+        };
+    }
+
+    // Kiểm tra sản phẩm có bị ẩn không
+    if (!item.variant.product.isActive) {
+        const error = new Error("Sản phẩm đã ngừng kinh doanh hoặc đang bị ẩn");
+        error.status = 400;
+        throw error;
+    }
+
+    // Kiểm tra tồn kho
+    if (quantity > item.variant.stockQuantity) {
+        const error = new Error(
+            `Số lượng yêu cầu (${quantity}) vượt quá số lượng còn lại trong kho (${item.variant.stockQuantity})`,
+        );
+        error.status = 400;
+        throw error;
+    }
+
+    const updatedItem = await prisma.cartItem.update({
+        where: { id: itemId },
+        data: { quantity },
+    });
+
+    return updatedItem;
+};
+
+module.exports = {
+    getMyCart,
+    addToCart,
+    updateCartItem
+};
+
+

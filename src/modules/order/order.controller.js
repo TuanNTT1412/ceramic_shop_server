@@ -64,7 +64,8 @@ const updatePaymentStatus = async (req, res, next) => {
 // ==========================================
 const getMyOrders = async (req, res, next) => {
   try {
-    const orders = await orderService.getMyOrders(req.user.id, req.query);
+    const userId = req.user.userId || req.user.id;
+    const orders = await orderService.getMyOrders(userId, req.query);
 
     res.status(200).json({
       success: true,
@@ -77,8 +78,9 @@ const getMyOrders = async (req, res, next) => {
 
 const getMyOrderDetail = async (req, res, next) => {
   try {
+    const userId = req.user.userId || req.user.id;
     const order = await orderService.getMyOrderDetail(
-      req.user.id,
+      userId,
       req.params.id,
     );
 

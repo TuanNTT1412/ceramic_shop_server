@@ -29,4 +29,10 @@ router.patch(
   orderController.updatePaymentStatus,
 );
 
+// ==========================================
+// NHÓM 2: DÀNH CHO KHÁCH HÀNG (CUSTOMER)
+// ==========================================
+router.get("/my-orders", authenticate, orderController.getMyOrders);
+router.get("/my-orders/:id", authenticate, orderController.getMyOrderDetail);
+
 module.exports = router;

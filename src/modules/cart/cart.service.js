@@ -234,10 +234,90 @@ const updateCartItem = async (userId, itemId, data) => {
     return updatedItem;
 };
 
+// 4. XÓA 1 MÓN KHỎI GIỎ HÀNG
+const removeCartItem = async (userId, itemId) => {
+    const item = await prisma.cartItem.findUnique({
+        where: { id: itemId },
+        include: { cart: true },
+    });
+
+    if (!item || item.cart.userId !== userId) {
+        const error = new Error("Không tìm thấy sản phẩm trong giỏ hàng");
+        error.status = 404;
+        throw error;
+    }
+
+    await prisma.cartItem.delete({
+        where: { id: itemId },
+    });
+
+    return { message: "Đã xóa sản phẩm khỏi giỏ hàng thành công" };
+};
+
+// 5. XÓA TẤT CẢ SẢN PHẨM KHÔNG KHẢ DỤNG KHỎI GIỎ
+const clearUnavailableCartItems = async (userId) => {
+    const cart = await prisma.cart.findUnique({
+        where: { userId },
+        include: {
+            cartItems: {
+                include: {
+                    variant: {
+                        include: { product: true },
+                    },
+                },
+            },
+        },
+    });
+
+    if (!cart || !cart.cartItems || cart.cartItems.length === 0) {
+        return { deletedCount: 0, message: "Không có sản phẩm nào trong giỏ hàng" };
+    }
+
+    // Lọc các item bị ẩn hoặc hết hàng / không đủ hàng
+    const unavailableItemIds = cart.cartItems
+        .filter((item) => {
+            const isInactive = !item.variant?.product?.isActive;
+            const isOutOfStock = !item.variant || item.variant.stockQuantity < item.quantity;
+            return isInactive || isOutOfStock;
+        })
+        .map((item) => item.id);
+
+    if (unavailableItemIds.length > 0) {
+        await prisma.cartItem.deleteMany({
+            where: {
+                id: { in: unavailableItemIds },
+            },
+        });
+    }
+
+    return {
+        deletedCount: unavailableItemIds.length,
+        message: `Đã xóa ${unavailableItemIds.length} sản phẩm không khả dụng khỏi giỏ hàng`,
+    };
+};
+
+// 6. XÓA TOÀN BỘ GIỎ HÀNG (LÀM TRỐNG GIỎ)
+const clearCart = async (userId) => {
+    const cart = await prisma.cart.findUnique({
+        where: { userId },
+    });
+
+    if (cart) {
+        await prisma.cartItem.deleteMany({
+            where: { cartId: cart.id },
+        });
+    }
+
+    return { message: "Đã làm trống giỏ hàng thành công" };
+};
+
 module.exports = {
     getMyCart,
     addToCart,
-    updateCartItem
+    updateCartItem,
+    removeCartItem,
+    clearUnavailableCartItems,
+    clearCart,
 };
 
 

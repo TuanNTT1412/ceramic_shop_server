@@ -17,12 +17,13 @@ const adminAuth = [authenticate, authorize(Role.STAFF, Role.ADMIN)]
 // ==========================================
 // Khách hàng chỉ xem sản phẩm đang kinh doanh
 router.get('/', productController.getProducts)
-
 // ==========================================
 // 2. PROTECTED ROUTES (DÀNH CHO ADMIN & STAFF)
 // ==========================================
 // Admin & Staff xem toàn bộ sản phẩm (kèm bộ lọc trạng thái ẩn/hiện)
 router.get('/admin', adminAuth, productController.getProductsForAdmin)
+
+router.get('/:id', productController.getProductDetail)
 
 router.post(
     '/',

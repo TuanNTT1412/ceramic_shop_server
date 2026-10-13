@@ -23,6 +23,7 @@ model User {
   name          String
   role          Role           @default(CUSTOMER)
   avatar        String?
+  isActive      Boolean        @default(true) // true = Đang hoạt động, false = Bị khóa
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
 

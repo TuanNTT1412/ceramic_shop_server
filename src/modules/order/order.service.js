@@ -147,19 +147,69 @@ const createOrder = async (customerId, data) => {
   });
 };
 
-const getMyOrders = async (customerId, query = {}) => {
-  const page = parseInt(query.page) || 1;
-  const limit = parseInt(query.limit) || 10;
+const getMyOrders = async (userId, query = {}) => {
+  const { search, orderStatus, paymentStatus } = query;
+
+  const page = Math.max(parseInt(query.page, 10) || 1, 1);
+  const limit = Math.max(parseInt(query.limit, 10) || 10, 1);
   const skip = (page - 1) * limit;
 
-  const orders = await prisma.order.findMany({
-    where: { customerId },
-    orderBy: { createdAt: "desc" },
-    skip,
-    take: limit,
-  });
+  const where = { customerId: userId };
 
-  const total = await prisma.order.count({ where: { customerId } });
+  if (orderStatus) {
+    where.orderStatus = orderStatus;
+  }
+
+  if (paymentStatus) {
+    where.paymentStatus = paymentStatus;
+  }
+
+  if (search && search.trim() !== "") {
+    const keyword = search.trim();
+
+    where.OR = [
+      {
+        orderCode: {
+          contains: keyword,
+          mode: "insensitive",
+        },
+      },
+      {
+        orderDetails: {
+          some: {
+            productName: {
+              contains: keyword,
+              mode: "insensitive",
+            },
+          },
+        },
+      },
+    ];
+  }
+
+  const [orders, total] = await prisma.$transaction([
+    prisma.order.findMany({
+      where,
+      orderBy: { createdAt: "desc" },
+      skip,
+      take: limit,
+      include: {
+        orderDetails: {
+          include: {
+            variant: {
+              include: {
+                images: {
+                  where: { isPrimary: true },
+                  take: 1,
+                },
+              },
+            },
+          },
+        },
+      },
+    }),
+    prisma.order.count({ where }),
+  ]);
 
   return {
     orders,
@@ -172,10 +222,23 @@ const getMyOrders = async (customerId, query = {}) => {
   };
 };
 
-const getMyOrderDetail = async (id, customerId) => {
+const getMyOrderDetail = async (userId, orderId) => {
   const order = await prisma.order.findFirst({
-    where: { id, customerId },
-    include: { orderDetails: true },
+    where: {
+      id: orderId,
+      customerId: userId,
+    },
+    include: {
+      orderDetails: {
+        include: {
+          variant: {
+            include: {
+              images: true,
+            },
+          },
+        },
+      },
+    },
   });
 
   if (!order) {
@@ -188,7 +251,7 @@ const getMyOrderDetail = async (id, customerId) => {
 };
 
 const cancelMyOrder = async (id, customerId) => {
-  const order = await getMyOrderDetail(id, customerId);
+  const order = await getMyOrderDetail(customerId, id);
 
   // Logic chặn: Tàm thời chỉ cho phép hủy khi đang PENDING tương lai có duyệt hủy đơn ở status khác
   if (order.orderStatus !== "PENDING") {

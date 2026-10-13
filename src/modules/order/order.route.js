@@ -39,13 +39,13 @@ router.post(
   "/",
   customerAuth,
   validate(orderValidation.createOrderSchema),
-  orderController.createOrder
+  orderController.createOrder,
 );
 
 // Khách hàng xem danh sách đơn của mình
 router.get("/", customerAuth, orderController.getMyOrders);
 
-// Khách hàng xem chi tiết 1 đơn của mình
+// Khách hàng xem chi tiết một đơn của mình
 router.get("/:id", customerAuth, orderController.getMyOrderDetail);
 
 // Khách hàng tự hủy đơn

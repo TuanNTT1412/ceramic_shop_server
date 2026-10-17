@@ -47,6 +47,12 @@ const login = async ({ email, password }) => {
     throw error
   }
 
+  if (!user.isActive) {
+    const error = new Error('Tài khoản của bạn đã bị khóa. Vui lòng liên hệ quản trị viên')
+    error.status = 403
+    throw error
+  }
+
   const { accessToken, refreshToken } = generateTokens(user.id, user.role)
 
   // Lưu refresh token vào DB

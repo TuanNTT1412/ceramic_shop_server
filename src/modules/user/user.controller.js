@@ -72,4 +72,64 @@ const setDefaultUserAddress = async (req, res, next) => {
     }
 };
 
-module.exports = { getProfileUser, updateProfileUser, changePasswordUser, getUserAddresses, createUserAddress, updateUserAddress, deleteUserAddress, setDefaultUserAddress };
+// ==========================================
+// DÀNH CHO ADMIN
+// ==========================================
+const getUsersForAdmin = async (req, res, next) => {
+    try {
+        const result = await userService.getUsersForAdmin(req.query);
+        res.status(200).json({
+            success: true,
+            data: result.users,
+            pagination: result.pagination,
+            message: result.message,
+        });
+    } catch (err) {
+        next(err);
+    }
+};
+
+const updateUserStatus = async (req, res, next) => {
+    try {
+        const adminId = req.user.userId || req.user.id;
+        const targetUserId = req.params.id;
+        const { isActive } = req.body;
+        const updatedUser = await userService.updateUserStatus(adminId, targetUserId, isActive);
+        res.status(200).json({
+            success: true,
+            message: isActive ? 'Mở khóa tài khoản thành công' : 'Khóa tài khoản thành công',
+            data: updatedUser,
+        });
+    } catch (err) {
+        next(err);
+    }
+};
+
+const createStaff = async (req, res, next) => {
+    try {
+        const staff = await userService.createStaff(req.body);
+        res.status(201).json({
+            success: true,
+            message: 'Tạo tài khoản nhân viên thành công',
+            data: staff,
+        });
+    } catch (err) {
+        next(err);
+    }
+};
+
+module.exports = {
+    // Customer
+    getProfileUser,
+    updateProfileUser,
+    changePasswordUser,
+    getUserAddresses,
+    createUserAddress,
+    updateUserAddress,
+    deleteUserAddress,
+    setDefaultUserAddress,
+    // Admin
+    getUsersForAdmin,
+    updateUserStatus,
+    createStaff,
+};

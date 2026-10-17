@@ -144,4 +144,173 @@ const setDefaultUserAddress = async (userId, addressId) => {
     return await updateUserAddress(userId, addressId, { isDefault: true });
 }
 
-module.exports = { getProfileUser, updateProfileUser, changePasswordUser, getUserAddresses, createUserAddress, updateUserAddress, deleteUserAddress, setDefaultUserAddress };
+// ==========================================
+// DÀNH CHO ADMIN
+// ==========================================
+
+// 1. Tra cứu danh sách người dùng (Search-first: Phải có tìm kiếm hoặc lọc mới hiện)
+const getUsersForAdmin = async (query = {}) => {
+    const { search, role, isActive } = query;
+
+    const hasSearch = search && search.trim() !== "";
+    const hasRole = Boolean(role);
+    const hasStatus = isActive !== undefined && isActive !== null && isActive !== "";
+
+    // Nếu không có bất kỳ tiêu chí tìm kiếm hoặc bộ lọc nào -> Trả về rỗng để tối ưu hiệu năng
+    if (!hasSearch && !hasRole && !hasStatus) {
+        return {
+            users: [],
+            pagination: {
+                page: 1,
+                limit: 10,
+                total: 0,
+                totalPages: 0,
+            },
+            message: "Vui lòng nhập từ khóa tìm kiếm (tên, email) hoặc chọn bộ lọc để tra cứu người dùng",
+        };
+    }
+
+    const page = Math.max(parseInt(query.page, 10) || 1, 1);
+    const limit = Math.max(parseInt(query.limit, 10) || 10, 1);
+    const skip = (page - 1) * limit;
+
+    const where = {};
+
+    if (hasRole) {
+        where.role = role;
+    }
+
+    if (hasStatus) {
+        where.isActive = isActive === "true" || isActive === true;
+    }
+
+    if (hasSearch) {
+        const keyword = search.trim();
+        where.OR = [
+            { name: { contains: keyword, mode: "insensitive" } },
+            { email: { contains: keyword, mode: "insensitive" } },
+        ];
+    }
+
+    const [users, total] = await prisma.$transaction([
+        prisma.user.findMany({
+            where,
+            orderBy: { createdAt: "desc" },
+            skip,
+            take: limit,
+            select: {
+                id: true,
+                name: true,
+                email: true,
+                role: true,
+                avatar: true,
+                isActive: true,
+                createdAt: true,
+                updatedAt: true,
+            },
+        }),
+        prisma.user.count({ where }),
+    ]);
+
+    return {
+        users,
+        pagination: {
+            page,
+            limit,
+            total,
+            totalPages: Math.ceil(total / limit),
+        },
+    };
+};
+
+// 2. Khóa / Mở khóa tài khoản người dùng
+const updateUserStatus = async (adminId, targetUserId, isActive) => {
+    const targetUser = await prisma.user.findUnique({
+        where: { id: targetUserId },
+    });
+
+    if (!targetUser) {
+        const error = new Error("Người dùng không tồn tại");
+        error.status = 404;
+        throw error;
+    }
+
+    // Ràng buộc 1: Admin không được tự khóa chính mình
+    if (adminId === targetUserId && isActive === false) {
+        const error = new Error("Bạn không thể tự khóa tài khoản của chính mình");
+        error.status = 400;
+        throw error;
+    }
+
+    // Ràng buộc 2: Không được phép khóa tài khoản Admin khác
+    if (targetUser.role === "ADMIN" && isActive === false) {
+        const error = new Error("Không được phép khóa tài khoản Quản trị viên (ADMIN)");
+        error.status = 400;
+        throw error;
+    }
+
+    const updatedUser = await prisma.user.update({
+        where: { id: targetUserId },
+        data: { isActive },
+        select: {
+            id: true,
+            name: true,
+            email: true,
+            role: true,
+            isActive: true,
+            updatedAt: true,
+        },
+    });
+
+    return updatedUser;
+};
+
+// 3. Tạo tài khoản nhân viên mới (Role mặc định = STAFF)
+const createStaff = async (data) => {
+    const existing = await prisma.user.findUnique({
+        where: { email: data.email },
+    });
+
+    if (existing) {
+        const error = new Error("Email đã được sử dụng");
+        error.status = 409;
+        throw error;
+    }
+
+    const hashedPassword = await bcrypt.hash(data.password, 10);
+    const staff = await prisma.user.create({
+        data: {
+            name: data.name,
+            email: data.email,
+            password: hashedPassword,
+            role: "STAFF",
+            isActive: true,
+        },
+        select: {
+            id: true,
+            name: true,
+            email: true,
+            role: true,
+            isActive: true,
+            createdAt: true,
+        },
+    });
+
+    return staff;
+};
+
+module.exports = {
+    // Customer
+    getProfileUser,
+    updateProfileUser,
+    changePasswordUser,
+    getUserAddresses,
+    createUserAddress,
+    updateUserAddress,
+    deleteUserAddress,
+    setDefaultUserAddress,
+    // Admin
+    getUsersForAdmin,
+    updateUserStatus,
+    createStaff,
+};

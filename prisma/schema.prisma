@@ -31,6 +31,7 @@ model User {
   addresses     UserAddress[]
   orders        Order[]
   cart          Cart?
+  reviews       Review[]
 }
 
 model RefreshToken {
@@ -79,6 +80,7 @@ model Product {
 
   variants     ProductVariant[]
   orderDetails OrderDetail[]
+  reviews      Review[]
 }
 
 model ProductVariant {
@@ -186,6 +188,8 @@ model OrderDetail {
   unitPrice      Int
   quantity       Int
   subTotal       Int
+
+  review         Review?
 }
 
 // ==========================================
@@ -213,4 +217,29 @@ model CartItem {
 
   // ĐỀ XUẤT THÊM: Chống trùng lặp sản phẩm trong cùng 1 giỏ hàng
   @@unique([cartId, variantId]) 
+}
+
+// ==========================================
+// 5. ĐÁNH GIÁ SẢN PHẨM (REVIEW)
+// ==========================================
+model Review {
+  id            String      @id @default(uuid())
+
+  userId        String
+  user          User        @relation(fields: [userId], references: [id])
+
+  productId     String
+  product       Product     @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  orderDetailId String      @unique
+  orderDetail   OrderDetail @relation(fields: [orderDetailId], references: [id])
+
+  rating        Int
+  comment       String?     @db.Text
+  images        String[]
+  adminReply    String?     @db.Text
+  replyAt       DateTime?
+
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
 }

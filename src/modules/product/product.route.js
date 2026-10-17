@@ -4,6 +4,7 @@ const validate = require('../../middlewares/validate.middleware')
 const productValidation = require('./product.validation')
 const { authenticate, authorize } = require('../../middlewares/auth.middleware')
 const { Role } = require('@prisma/client')
+const reviewRoute = require('../review/review.route')
 
 const router = express.Router()
 
@@ -66,5 +67,12 @@ router.patch(
     validate(productValidation.updateImageSchema),
     productController.updateVariantImage
 )
+
+// ==========================================
+// 3. ĐÁNH GIÁ SẢN PHẨM (Sub-route)
+// ==========================================
+// GET  /products/:productId/reviews         ← Lấy danh sách đánh giá
+// POST /products/:productId/reviews         ← Khách hàng gửi đánh giá (cũng dùng reviewRoute riêng tại /reviews)
+router.use('/:productId/reviews', reviewRoute)
 
 module.exports = router

@@ -31,11 +31,6 @@ const updateUserStatusSchema = z.object({
     isActive: z.boolean({ required_error: 'Trạng thái isActive là bắt buộc' }),
 });
 
-const createStaffSchema = z.object({
-    name: z.string().min(2, 'Tên nhân viên phải có ít nhất 2 ký tự'),
-    email: z.string().email('Email không đúng định dạng'),
-    password: z.string().min(6, 'Mật khẩu phải có ít nhất 6 ký tự'),
-});
 
 module.exports = {
     updateUserSchema,
@@ -43,5 +38,4 @@ module.exports = {
     createUserAddressSchema,
     updateUserAddressSchema,
     updateUserStatusSchema,
-    createStaffSchema,
 };

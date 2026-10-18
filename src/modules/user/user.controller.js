@@ -105,18 +105,6 @@ const updateUserStatus = async (req, res, next) => {
     }
 };
 
-const createStaff = async (req, res, next) => {
-    try {
-        const staff = await userService.createStaff(req.body);
-        res.status(201).json({
-            success: true,
-            message: 'Tạo tài khoản nhân viên thành công',
-            data: staff,
-        });
-    } catch (err) {
-        next(err);
-    }
-};
 
 module.exports = {
     // Customer
@@ -131,5 +119,4 @@ module.exports = {
     // Admin
     getUsersForAdmin,
     updateUserStatus,
-    createStaff,
 };

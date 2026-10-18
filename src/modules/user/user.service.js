@@ -265,39 +265,6 @@ const updateUserStatus = async (adminId, targetUserId, isActive) => {
     return updatedUser;
 };
 
-// 3. Tạo tài khoản nhân viên mới (Role mặc định = STAFF)
-const createStaff = async (data) => {
-    const existing = await prisma.user.findUnique({
-        where: { email: data.email },
-    });
-
-    if (existing) {
-        const error = new Error("Email đã được sử dụng");
-        error.status = 409;
-        throw error;
-    }
-
-    const hashedPassword = await bcrypt.hash(data.password, 10);
-    const staff = await prisma.user.create({
-        data: {
-            name: data.name,
-            email: data.email,
-            password: hashedPassword,
-            role: "STAFF",
-            isActive: true,
-        },
-        select: {
-            id: true,
-            name: true,
-            email: true,
-            role: true,
-            isActive: true,
-            createdAt: true,
-        },
-    });
-
-    return staff;
-};
 
 module.exports = {
     // Customer
@@ -312,5 +279,4 @@ module.exports = {
     // Admin
     getUsersForAdmin,
     updateUserStatus,
-    createStaff,
 };

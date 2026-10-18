@@ -7,7 +7,6 @@ const {
     createUserAddressSchema,
     updateUserAddressSchema,
     updateUserStatusSchema,
-    createStaffSchema,
 } = require('./user.validation');
 const { authenticate, authorize } = require('../../middlewares/auth.middleware');
 const { Role } = require('@prisma/client');
@@ -21,7 +20,6 @@ const adminAuth = [authorize(Role.ADMIN)];
 
 router.get('/admin', adminAuth, userController.getUsersForAdmin);
 router.patch('/admin/:id/status', adminAuth, validate(updateUserStatusSchema), userController.updateUserStatus);
-router.post('/admin/staff', adminAuth, validate(createStaffSchema), userController.createStaff);
 
 // ==========================================
 // NHÓM 2: DÀNH CHO CUSTOMER (HỒ SƠ CÁ NHÂN)

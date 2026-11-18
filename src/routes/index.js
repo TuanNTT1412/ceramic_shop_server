@@ -7,6 +7,7 @@ const categoryRoute = require("../modules/category/category.route");
 const cartRoute = require("../modules/cart/cart.route");
 const userRoute = require("../modules/user/user.route");
 const reviewRoute = require("../modules/review/review.route");
+const returnRoute = require("../modules/return/return.route");
 
 const router = express.Router();
 
@@ -23,5 +24,6 @@ router.use("/products", productRoute);
 router.use("/categories", categoryRoute);
 router.use("/cart", cartRoute);
 router.use("/reviews", reviewRoute);
+router.use("/returns", returnRoute);
 
 module.exports = router;

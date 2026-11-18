@@ -2,7 +2,7 @@ const prisma = require("../../config/db")
 
 // 1.Thêm 1 sản phẩm mới(kèm 1 phân loại và 1 ảnh ban đầu)
 const createProduct = async (data) => {
-    const { name, description, categoryId, initialVariant } = data
+    const { name, description, categoryId, isReturnable, initialVariant } = data
 
     // Kiểm tra danh mục tồn tại
     const category = await prisma.category.findUnique({
@@ -20,6 +20,7 @@ const createProduct = async (data) => {
             name,
             description,
             categoryId,
+            isReturnable: isReturnable ?? false,
             variants: {
                 create: {
                     variantName: initialVariant.variantName,
@@ -245,6 +246,7 @@ const getProductDetail = async (productId) => {
             id: true,
             name: true,
             description: true,
+            isReturnable: true,
             category: {
                 select: { id: true, name: true }
             },

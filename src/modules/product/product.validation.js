@@ -5,6 +5,7 @@ const createProductSchema = z.object({
     name: z.string().min(1, 'Tên sản phẩm không được để trống'),
     description: z.string().optional(),
     categoryId: z.string().uuid('ID danh mục không hợp lệ'),
+    isReturnable: z.boolean().optional(),
     initialVariant: z.object({
         variantName: z.string().min(1, 'Tên phân loại không được để trống'),
         price: z.number().int('Giá phải là số nguyên').min(0, 'Giá không thể âm'),
@@ -22,7 +23,8 @@ const updateProductSchema = z.object({
     name: z.string().min(1, 'Tên sản phẩm không được để trống').optional(),
     description: z.string().nullable().optional(),
     categoryId: z.string().uuid('ID danh mục không hợp lệ').optional(),
-    isActive: z.boolean().optional()
+    isActive: z.boolean().optional(),
+    isReturnable: z.boolean().optional()
 })
 
 // Schema thêm mới phân loại sản phẩm

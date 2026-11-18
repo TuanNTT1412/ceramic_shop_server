@@ -6,6 +6,21 @@ const getAllOrders = async () => {
     orderBy: { createdAt: "desc" },
     include: {
       customer: { select: { name: true, email: true } },
+      orderDetails: {
+        include: {
+          variant: {
+            include: {
+              images: {
+                orderBy: [
+                  { isPrimary: "desc" },
+                  { displayOrder: "asc" },
+                ],
+                take: 1,
+              },
+            },
+          },
+        },
+      },
     },
   });
 
@@ -17,7 +32,21 @@ const getOrderDetail = async (id) => {
     where: { id },
     include: {
       customer: { select: { name: true, email: true } },
-      orderDetails: true,
+      orderDetails: {
+        include: {
+          variant: {
+            include: {
+              images: {
+                orderBy: [
+                  { isPrimary: "desc" },
+                  { displayOrder: "asc" },
+                ],
+                take: 1,
+              },
+            },
+          },
+        },
+      },
     },
   });
 

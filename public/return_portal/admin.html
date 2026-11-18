@@ -1,0 +1,692 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Return Inspection Management — Gốm Mộc Operations</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,500;0,600;0,700;1,400&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-page: #FAF6F0;
+            --bg-card: #FFFFFF;
+            --bg-subtle: #F4EFEA;
+            --border-subtle: #E8DFD5;
+            --border-hover: #D4C5B5;
+            --text-heading: #2B231D;
+            --text-body: #5C5046;
+            --text-muted: #8C7E73;
+            --brand-terracotta: #B85D34;
+            --brand-terracotta-hover: #9E4C27;
+            --brand-terracotta-soft: rgba(184, 93, 52, 0.08);
+            --brand-sand: #C89B6D;
+            --status-success: #3B6B35;
+            --status-success-bg: rgba(59, 107, 53, 0.08);
+            --status-success-border: rgba(59, 107, 53, 0.25);
+            --status-danger: #B93822;
+            --status-danger-bg: rgba(185, 56, 34, 0.08);
+            --status-danger-border: rgba(185, 56, 34, 0.25);
+            --status-amber: #B47B19;
+            --status-amber-bg: rgba(180, 123, 25, 0.08);
+            --status-amber-border: rgba(180, 123, 25, 0.25);
+            --shadow-soft: 0 4px 20px -2px rgba(43, 35, 29, 0.05);
+            --shadow-modal: 0 20px 40px -10px rgba(43, 35, 29, 0.15);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg-page);
+            color: var(--text-body);
+            font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            min-height: 100vh;
+            padding: 32px 24px 64px;
+        }
+
+        .dashboard-header {
+            max-width: 1200px;
+            margin: 0 auto 28px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            padding-bottom: 20px;
+            border-bottom: 1px solid var(--border-subtle);
+            flex-wrap: wrap;
+            gap: 16px;
+        }
+
+        .brand-eyebrow {
+            font-size: 11px;
+            letter-spacing: 0.16em;
+            text-transform: uppercase;
+            font-weight: 700;
+            color: var(--brand-terracotta);
+            margin-bottom: 6px;
+        }
+
+        .brand-title {
+            font-family: 'Playfair Display', Georgia, serif;
+            font-size: 28px;
+            font-weight: 600;
+            color: var(--text-heading);
+            letter-spacing: -0.01em;
+            margin-bottom: 4px;
+        }
+
+        .brand-desc {
+            font-size: 13px;
+            color: var(--text-muted);
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 14px;
+            align-items: center;
+        }
+
+        .nav-link {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-body);
+            text-decoration: none;
+            padding: 8px 14px;
+            border-radius: 6px;
+            border: 1px solid var(--border-subtle);
+            background: var(--bg-card);
+            transition: all 0.2s;
+        }
+
+        .nav-link:hover {
+            border-color: var(--brand-terracotta);
+            color: var(--brand-terracotta);
+        }
+
+        .main-container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .toolbar-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .section-heading {
+            font-family: 'Playfair Display', Georgia, serif;
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--text-heading);
+        }
+
+        .btn-refresh {
+            background-color: var(--bg-card);
+            color: var(--text-heading);
+            border: 1px solid var(--border-subtle);
+            border-radius: 8px;
+            padding: 8px 16px;
+            font-size: 13px;
+            font-weight: 600;
+            font-family: inherit;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-refresh:hover {
+            border-color: var(--brand-terracotta);
+            color: var(--brand-terracotta);
+        }
+
+        .table-card {
+            background-color: var(--bg-card);
+            border: 1px solid var(--border-subtle);
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: var(--shadow-soft);
+        }
+
+        .table-responsive {
+            width: 100%;
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+            font-size: 13px;
+        }
+
+        th {
+            background-color: var(--bg-subtle);
+            color: var(--text-muted);
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            padding: 14px 18px;
+            border-bottom: 1px solid var(--border-subtle);
+            white-space: nowrap;
+        }
+
+        td {
+            padding: 16px 18px;
+            border-bottom: 1px solid var(--border-subtle);
+            vertical-align: middle;
+            color: var(--text-body);
+        }
+
+        tr:last-child td {
+            border-bottom: none;
+        }
+
+        tr:hover td {
+            background-color: #FCFAF7;
+        }
+
+        .code-pill {
+            font-family: monospace;
+            font-size: 12px;
+            font-weight: 700;
+            color: var(--text-heading);
+        }
+
+        .badge-pill {
+            display: inline-flex;
+            align-items: center;
+            padding: 4px 10px;
+            border-radius: 999px;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+            white-space: nowrap;
+        }
+
+        .badge-draft {
+            background: var(--status-amber-bg);
+            color: var(--status-amber);
+            border: 1px solid var(--status-amber-border);
+        }
+
+        .badge-submitted {
+            background: var(--status-success-bg);
+            color: var(--status-success);
+            border: 1px solid var(--status-success-border);
+        }
+
+        .badge-defective {
+            background: var(--status-danger-bg);
+            color: var(--status-danger);
+            border: 1px solid var(--status-danger-border);
+        }
+
+        .badge-intact {
+            background: var(--status-success-bg);
+            color: var(--status-success);
+            border: 1px solid var(--status-success-border);
+        }
+
+        .badge-pending {
+            background: var(--bg-subtle);
+            color: var(--text-muted);
+            border: 1px solid var(--border-subtle);
+        }
+
+        .btn-action {
+            background-color: var(--bg-card);
+            border: 1px solid var(--border-subtle);
+            color: var(--text-heading);
+            padding: 6px 14px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 600;
+            font-family: inherit;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+        }
+
+        .btn-action:hover {
+            border-color: var(--brand-terracotta);
+            color: var(--brand-terracotta);
+            background-color: var(--brand-terracotta-soft);
+        }
+
+        /* Modal */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(43, 35, 29, 0.6);
+            backdrop-filter: blur(4px);
+            z-index: 1000;
+            padding: 24px;
+            overflow-y: auto;
+            justify-content: center;
+            align-items: flex-start;
+        }
+
+        .modal-panel {
+            background: var(--bg-card);
+            border: 1px solid var(--border-subtle);
+            border-radius: 14px;
+            width: 100%;
+            max-width: 840px;
+            padding: 32px;
+            box-shadow: var(--shadow-modal);
+            position: relative;
+            margin: 40px auto;
+        }
+
+        .modal-close-btn {
+            position: absolute;
+            top: 20px;
+            right: 24px;
+            background: none;
+            border: none;
+            font-size: 24px;
+            line-height: 1;
+            color: var(--text-muted);
+            cursor: pointer;
+            padding: 4px;
+        }
+
+        .modal-close-btn:hover {
+            color: var(--text-heading);
+        }
+
+        .modal-title {
+            font-family: 'Playfair Display', Georgia, serif;
+            font-size: 22px;
+            font-weight: 600;
+            color: var(--text-heading);
+            margin-bottom: 20px;
+            padding-bottom: 14px;
+            border-bottom: 1px solid var(--border-subtle);
+        }
+
+        .details-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 14px;
+            background: var(--bg-subtle);
+            border: 1px solid var(--border-subtle);
+            border-radius: 10px;
+            padding: 18px;
+            margin-bottom: 24px;
+        }
+
+        .detail-cell .label {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-muted);
+            margin-bottom: 4px;
+        }
+
+        .detail-cell .value {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-heading);
+        }
+
+        .photos-section-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-heading);
+            margin-bottom: 12px;
+        }
+
+        .photos-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 12px;
+            margin-bottom: 24px;
+        }
+
+        @media (max-width: 600px) {
+            .photos-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        .photo-card {
+            background: var(--bg-subtle);
+            border: 1px solid var(--border-subtle);
+            border-radius: 8px;
+            padding: 8px;
+            text-align: center;
+        }
+
+        .photo-card img {
+            width: 100%;
+            height: 120px;
+            object-fit: cover;
+            border-radius: 6px;
+            background-color: #EAE3D9;
+        }
+
+        .photo-card .photo-label {
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--text-muted);
+            margin-top: 6px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .ai-summary-card {
+            background-color: var(--bg-subtle);
+            border: 1px solid var(--border-subtle);
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 24px;
+        }
+
+        .ai-summary-title {
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--brand-terracotta);
+            margin-bottom: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .ai-metrics-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            font-size: 13px;
+            line-height: 1.5;
+        }
+
+        .ai-metric-item {
+            display: flex;
+            justify-content: space-between;
+            padding-bottom: 6px;
+            border-bottom: 1px dashed var(--border-subtle);
+        }
+
+        .ai-metric-item:last-child {
+            border-bottom: none;
+            padding-bottom: 0;
+        }
+
+        .ai-metric-item .name {
+            color: var(--text-muted);
+        }
+
+        .ai-metric-item .val {
+            font-weight: 600;
+            color: var(--text-heading);
+        }
+
+        .modal-footer {
+            display: flex;
+            justify-content: flex-end;
+            gap: 12px;
+        }
+
+        .btn-inspect-full {
+            background-color: var(--brand-terracotta);
+            color: #FFFFFF;
+            padding: 12px 22px;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 600;
+            font-family: inherit;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            transition: background-color 0.2s;
+        }
+
+        .btn-inspect-full:hover {
+            background-color: var(--brand-terracotta-hover);
+        }
+    </style>
+</head>
+<body>
+
+    <header class="dashboard-header">
+        <div>
+            <div class="brand-eyebrow">Operations & Quality Assurance</div>
+            <h1 class="brand-title">Return Inspection Dashboard</h1>
+            <p class="brand-desc">Review customer return tickets, differential DINOv2 inspection verdicts, and refund proposals.</p>
+        </div>
+        <nav class="nav-links">
+            <a href="/return_portal/index.html" class="nav-link">Customer Portal</a>
+            <a href="http://localhost:8000/" target="_blank" class="nav-link">AI Developer Workbench</a>
+        </nav>
+    </header>
+
+    <main class="main-container">
+        <div class="toolbar-bar">
+            <h2 class="section-heading">Return Verification Tickets</h2>
+            <button class="btn-refresh" onclick="loadReturns()">Refresh Tickets</button>
+        </div>
+
+        <div class="table-card">
+            <div class="table-responsive">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Ticket ID</th>
+                            <th>Order Code</th>
+                            <th>Customer</th>
+                            <th>Item Name</th>
+                            <th>Created Date</th>
+                            <th>Status</th>
+                            <th>Inspection Verdict</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="returns-tbody">
+                        <tr><td colspan="8" style="text-align:center; padding:36px; color:var(--text-muted);">Loading inspection records...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+
+    <!-- Inspection Detail Modal -->
+    <div class="modal-overlay" id="detail-modal">
+        <div class="modal-panel">
+            <button class="modal-close-btn" onclick="closeModal()">&times;</button>
+            <h2 class="modal-title" id="modal-title">Return Ticket Overview</h2>
+
+            <div class="details-grid" id="modal-info-grid"></div>
+
+            <div class="photos-section-title">Customer Captured Angles</div>
+            <div class="photos-grid" id="modal-photos-grid"></div>
+
+            <div class="ai-summary-card" id="modal-ai-box">
+                <div class="ai-summary-title">Differential AI Inspection Summary</div>
+                <div class="ai-metrics-list" id="modal-ai-summary"></div>
+            </div>
+
+            <div class="modal-footer">
+                <a id="modal-ai-detail-btn" href="#" target="_blank" class="btn-inspect-full">
+                    View Forensic AI Examination (Port 8000)
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let returnsData = [];
+
+        async function loadReturns() {
+            const tbody = document.getElementById('returns-tbody');
+            tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding:36px; color:var(--text-muted);">Refreshing inspection records...</td></tr>';
+
+            try {
+                const res = await fetch('/api/v1/returns/admin');
+                const json = await res.json();
+                if (!json.success || !json.data) {
+                    tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; color:var(--status-danger); padding:36px;">Failed to load records: ${escapeHtml(json.message || 'Server error')}</td></tr>`;
+                    return;
+                }
+
+                returnsData = json.data;
+                renderTable(returnsData);
+            } catch (err) {
+                tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; color:var(--status-danger); padding:36px;">Connection error: ${escapeHtml(err.message)}</td></tr>`;
+            }
+        }
+
+        function renderTable(list) {
+            const tbody = document.getElementById('returns-tbody');
+            if (!list || list.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding:36px; color:var(--text-muted);">No return verification tickets found.</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = '';
+            list.forEach(item => {
+                const tr = document.createElement('tr');
+                const isSubmitted = item.status === 'TICKET_SUBMITTED' || item.status === 'COMPLETED';
+                const statusBadge = isSubmitted 
+                    ? '<span class="badge-pill badge-submitted">SUBMITTED</span>' 
+                    : '<span class="badge-pill badge-draft">AWAITING SCAN</span>';
+
+                let aiBadge = '<span class="badge-pill badge-pending">PENDING</span>';
+                if (item.aiInspection) {
+                    const ai = item.aiInspection;
+                    aiBadge = ai.aiDetectedDamage
+                        ? `<span class="badge-pill badge-defective">DEFECTIVE (${(ai.aiDamageScore * 100).toFixed(1)}%)</span>`
+                        : `<span class="badge-pill badge-intact">INTACT</span>`;
+                }
+
+                const createdDate = new Date(item.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+
+                tr.innerHTML = `
+                    <td><span class="code-pill">${escapeHtml(item.returnCode || item.id.substring(0, 8))}</span></td>
+                    <td>${escapeHtml(item.order?.orderCode || 'N/A')}</td>
+                    <td>${escapeHtml(item.customer?.name || item.order?.receiverName || 'Guest Customer')}</td>
+                    <td>${escapeHtml(item.orderDetail?.productName || 'Artisan Vase')}</td>
+                    <td style="color:var(--text-muted); font-size:12px;">${createdDate}</td>
+                    <td>${statusBadge}</td>
+                    <td>${aiBadge}</td>
+                    <td>
+                        <button class="btn-action" onclick="openDetail('${item.id}')">View Details</button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function openDetail(returnId) {
+            const item = returnsData.find(r => r.id === returnId);
+            if (!item) return;
+
+            document.getElementById('modal-title').textContent = `Return Ticket: ${item.returnCode || item.id}`;
+            
+            const grid = document.getElementById('modal-info-grid');
+            grid.innerHTML = `
+                <div class="detail-cell"><div class="label">Order Code</div><div class="value">${escapeHtml(item.order?.orderCode || 'N/A')}</div></div>
+                <div class="detail-cell"><div class="label">Customer</div><div class="value">${escapeHtml(item.customer?.name || item.order?.receiverName || 'N/A')}</div></div>
+                <div class="detail-cell"><div class="label">Contact Phone</div><div class="value">${escapeHtml(item.order?.receiverPhone || 'N/A')}</div></div>
+                <div class="detail-cell"><div class="label">Item SKU / Name</div><div class="value">${escapeHtml(item.orderDetail?.productName || 'N/A')}</div></div>
+                <div class="detail-cell"><div class="label">Reason Category</div><div class="value">${escapeHtml(item.reason || 'General Examination')}</div></div>
+                <div class="detail-cell"><div class="label">Refund Method</div><div class="value">${escapeHtml(item.refundMethod || 'BANK_TRANSFER')}</div></div>
+            `;
+
+            // Render 4 Photos
+            const photosGrid = document.getElementById('modal-photos-grid');
+            photosGrid.innerHTML = '';
+            const imgs = item.aiInspection?.capturedImages || {};
+            const viewKeys = [
+                { key: 'front', label: 'Front View' },
+                { key: 'back', label: 'Back View' },
+                { key: 'left', label: 'Left View' },
+                { key: 'right', label: 'Right View' }
+            ];
+
+            viewKeys.forEach(v => {
+                const url = imgs[v.key] || imgs[v.key.toLowerCase()] || '';
+                const card = document.createElement('div');
+                card.className = 'photo-card';
+                card.innerHTML = url 
+                    ? `<img src="${url}" alt="${v.label}"><div class="photo-label">${v.label}</div>`
+                    : `<div style="height:120px; display:flex; align-items:center; justify-content:center; color:var(--text-muted); font-size:12px;">Not Captured</div><div class="photo-label">${v.label}</div>`;
+                photosGrid.appendChild(card);
+            });
+
+            // AI Summary
+            const aiBox = document.getElementById('modal-ai-box');
+            const aiBtn = document.getElementById('modal-ai-detail-btn');
+            const summaryList = document.getElementById('modal-ai-summary');
+
+            if (item.aiInspection) {
+                const ai = item.aiInspection;
+                const isDefective = Boolean(ai.aiDetectedDamage);
+                summaryList.innerHTML = `
+                    <div class="ai-metric-item">
+                        <span class="name">Overall Verdict</span>
+                        <span class="val" style="color:${isDefective ? 'var(--status-danger)' : 'var(--status-success)'}">${isDefective ? 'DEFECTIVE DETECTED' : 'INTACT / AUTHENTIC'}</span>
+                    </div>
+                    <div class="ai-metric-item">
+                        <span class="name">Primary Anomaly Classification</span>
+                        <span class="val">${escapeHtml(ai.aiDefectType || (isDefective ? 'Surface Flaw' : 'None'))}</span>
+                    </div>
+                    <div class="ai-metric-item">
+                        <span class="name">Damage Surface Ratio</span>
+                        <span class="val">${(ai.aiDamageScore * 100).toFixed(2)}%</span>
+                    </div>
+                    <div class="ai-metric-item">
+                        <span class="name">Proposed Refund Amount</span>
+                        <span class="val" style="color:var(--brand-terracotta); font-weight:700;">${Number(ai.estimatedRefundAmount || 0).toLocaleString('vi-VN')} VND</span>
+                    </div>
+                    <div class="ai-metric-item">
+                        <span class="name">Inspection Timestamp</span>
+                        <span class="val">${new Date(ai.inspectedAt).toLocaleString('en-US')}</span>
+                    </div>
+                `;
+
+                const sessId = ai.captureSessionId || 'cce7ffe0';
+                aiBtn.href = `http://localhost:8000/result/${sessId}`;
+                aiBtn.style.display = 'inline-flex';
+                aiBox.style.display = 'block';
+            } else {
+                summaryList.innerHTML = `
+                    <div style="color:var(--text-muted); font-size:13px;">Customer has not finished capturing all 4 angles or AI analysis is currently running.</div>
+                `;
+                aiBtn.style.display = 'none';
+            }
+
+            document.getElementById('detail-modal').style.display = 'flex';
+        }
+
+        function closeModal() {
+            document.getElementById('detail-modal').style.display = 'none';
+        }
+
+        window.onclick = function(event) {
+            const modal = document.getElementById('detail-modal');
+            if (event.target === modal) {
+                closeModal();
+            }
+        };
+
+        function escapeHtml(str) {
+            if (!str) return '';
+            return String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+        }
+
+        loadReturns();
+    </script>
+</body>
+</html>

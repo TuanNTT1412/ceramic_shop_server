@@ -32,6 +32,7 @@ model User {
   orders        Order[]
   cart          Cart?
   reviews       Review[]
+  returnRequests ReturnRequest[]
 }
 
 model RefreshToken {
@@ -75,6 +76,7 @@ model Product {
   name        String
   description String?
   isActive    Boolean   @default(true) // true = Đang bán, false = Ẩn
+  isReturnable Boolean  @default(false) // true = Hỗ trợ trả hàng & AI, false = Không áp dụng đổi trả
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 
@@ -169,6 +171,7 @@ model Order {
   updatedAt        DateTime          @updatedAt
 
   orderDetails     OrderDetail[]
+  returnRequests ReturnRequest[]
 }
 
 model OrderDetail {
@@ -190,6 +193,7 @@ model OrderDetail {
   subTotal       Int
 
   review         Review?
+  returnRequests ReturnRequest[]
 }
 
 // ==========================================
@@ -243,3 +247,117 @@ model Review {
   createdAt     DateTime    @default(now())
   updatedAt     DateTime    @updatedAt
 }
+
+// ==========================================
+// 6. QUẢN LÝ TRẢ HÀNG & KIỂM ĐỊNH (RETURN & INSPECTION)
+// ==========================================
+
+enum ReturnStatus {
+  DRAFT_INSPECTING       // Khách đang quét QR chụp ảnh & AI tính toán
+  CANCELLED_BY_CUSTOMER  // Khách xem mức AI xong bấm Không đồng ý (Dừng lại)
+  TICKET_SUBMITTED       // Khách Đồng ý -> Đã nộp ticket cho shop
+//   WAITING_FOR_PICKUP     // Chờ shipper qua lấy hàng
+//   WAREHOUSE_INSPECTING   // Hàng về kho, nhân viên đang kiểm tra thực tế
+//   RETURNING_TO_CUSTOMER  // Khách không chịu kết quả kho -> Shop gửi trả bình lại cho khách
+//   ITEM_RETURNED_TO_CUSTOMER // Khách đã nhận lại bình -> Đóng ticket
+//   AWAITING_REFUND        // Đạt kiểm định kho, chờ shop chuyển tiền
+//   COMPLETED              // Đã chuyển tiền & upload bill thành công
+//   REJECTED               // Shop từ chối thẳng
+}
+
+enum ReturnReason {
+  DAMAGED_IN_TRANSIT     // Vỡ/nứt khi nhận hàng
+  DEFECTIVE_PRODUCT      // Lỗi men, nứt lò nung
+  WRONG_ITEM             // Shop giao sai mẫu
+  NOT_AS_DESCRIBED       // Không đúng mô tả
+  OTHER                  // Lý do khác
+}
+
+// enum CustomerFinalDecision {
+//   ACCEPT_REFUND          // Đồng ý nhận tiền hoàn
+//   RETRIEVE_ITEM          // Không đồng ý mức tiền, muốn nhận lại chiếc bình
+// }
+
+// 1. Hồ sơ yêu cầu trả hàng
+model ReturnRequest {
+  id                    String                 @id @default(uuid())
+  returnCode            String                 @unique // VD: "RET-20261028-001"
+  
+  orderId               String
+  order                 Order                  @relation(fields: [orderId], references: [id])
+  
+  customerId            String
+  customer              User                   @relation(fields: [customerId], references: [id])
+  
+  orderDetailId         String
+  orderDetail           OrderDetail            @relation(fields: [orderDetailId], references: [id])
+  
+  reason                ReturnReason
+  customerNote          String?                @db.Text
+  status                ReturnStatus           @default(DRAFT_INSPECTING)
+  
+  createdAt             DateTime               @default(now())
+  updatedAt             DateTime               @updatedAt
+
+  // Quan hệ 1-1 với 3 thực thể con sinh ra theo tiến trình
+  aiInspection          AiInspection?
+  // warehouseVerification WarehouseVerification?
+  // refund                Refund?
+}
+
+// 2. Giám định AI ban đầu (Sinh ra khi khách quét QR & chụp ảnh xong)
+model AiInspection {
+  id                    String        @id @default(uuid())
+  returnRequestId       String        @unique
+  returnRequest         ReturnRequest @relation(fields: [returnRequestId], references: [id], onDelete: Cascade)
+  
+  captureSessionId      String?
+  capturedImages        Json?         // { truoc: "url", sau: "url", trai: "url", phai: "url" }
+  
+  aiDetectedDamage      Boolean       @default(false)
+  aiDamageScore         Float         @default(0.0) // 0.0 -> 1.0 (VD: 0.85 = 85%)
+  aiDefectType          String?       // "CRACK_NECK", "CHIP_RIM"...
+  estimatedRefundAmount Int           @default(0)   // Số tiền AI đề xuất (VNĐ)
+  
+  customerAgreedWithAi  Boolean       // true = Khách đồng ý nộp ticket, false = Không đồng ý
+  customerRejectReason  String?       @db.Text
+  defectDetails         Json?         // Chi tiết các khuyết tật (tọa độ bbox, diện tích, confidence)
+  resultImages          Json?         // Ảnh kết quả khoanh vùng lỗi (_result.jpg)
+  
+  inspectedAt           DateTime      @default(now())
+}
+
+// 3. Kiểm định thực tế tại kho (CHỈ sinh ra khi hàng về đến kho shop)
+// model WarehouseVerification {
+//   id                    String                @id @default(uuid())
+//   returnRequestId       String                @unique
+//   returnRequest         ReturnRequest         @relation(fields: [returnRequestId], references: [id], onDelete: Cascade)
+//   
+//   inspectorId           String                // ID nhân viên kho kiểm tra
+//   matchesAiImages       Boolean               // Hàng nhận về có đúng ảnh AI chụp không (chống tráo)
+//   warehouseNote         String?               @db.Text
+//   finalRefundOffer      Int                   // Mức tiền shop chốt sau khi soi bình
+//   
+//   customerFinalDecision CustomerFinalDecision? // ACCEPT_REFUND hoặc RETRIEVE_ITEM
+//   
+//   verifiedAt            DateTime              @default(now())
+// }
+// 
+// 4. Giao dịch hoàn tiền (CHỈ sinh ra khi khách chọn ACCEPT_REFUND)
+// model Refund {
+//   id                    String        @id @default(uuid())
+//   returnRequestId       String        @unique
+//   returnRequest         ReturnRequest @relation(fields: [returnRequestId], references: [id], onDelete: Cascade)
+//   
+//   customerBankQrUrl     String?       // Ảnh QR ngân hàng của khách
+//   customerBankName      String?       // "Vietcombank"
+//   customerAccountNumber String?       // "001100..."
+//   customerAccountName   String?       // "NGUYEN VAN A"
+//   
+//   refundAmount          Int           // Số tiền thực tế shop đã chuyển
+//   proofImageUrl         String        // Ảnh chụp màn hình bill chuyển khoản của shop
+//   transferredAt         DateTime      @default(now())
+//   performedBy           String        // ID admin/kế toán chuyển tiền
+// }
+
+// tinh duong chim bay de 2 option shop lay hoac ben thu 3

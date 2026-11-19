@@ -169,6 +169,9 @@ model Order {
   
   createdAt        DateTime          @default(now())
   updatedAt        DateTime          @updatedAt
+  shippedAt        DateTime?         // Thời điểm bàn giao bưu tá xuất kho
+  completedAt      DateTime?         // Thời điểm giao thành công hoặc khách nhận tại quầy
+  canceledAt       DateTime?         // Thời điểm hủy đơn
 
   orderDetails     OrderDetail[]
   returnRequests ReturnRequest[]

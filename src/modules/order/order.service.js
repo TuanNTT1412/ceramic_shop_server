@@ -63,6 +63,15 @@ const updateOrderStatus = async (id, data) => {
   // 1. Kéo đơn hàng lên trước để đối chiếu
   const order = await getOrderDetail(id);
 
+  // Terminal state: Không cho phép đổi trạng thái nếu đơn đã COMPLETED hoặc CANCELED
+  if (order.orderStatus === "COMPLETED" || order.orderStatus === "CANCELED") {
+    const error = new Error(
+      `Đơn hàng đã ở trạng thái ${order.orderStatus === "COMPLETED" ? "Đã hoàn thành" : "Đã hủy"}, không thể thay đổi trạng thái nữa`
+    );
+    error.status = 400;
+    throw error;
+  }
+
   // 2. Kiểm tra nghiệp vụ: READY_FOR_PICKUP chỉ dành cho đơn lấy tại cửa hàng
   if (
     data.orderStatus === "READY_FOR_PICKUP" &&
@@ -75,10 +84,20 @@ const updateOrderStatus = async (id, data) => {
     throw error;
   }
 
-  // 3. Hợp lệ thì tiến hành cập nhật DB
+  // 3. Tự động gán mốc thời gian chuyển đổi tương ứng nếu chưa có
+  const updateData = { ...data };
+  if (data.orderStatus === "SHIPPING" && !order.shippedAt) {
+    updateData.shippedAt = new Date();
+  } else if (data.orderStatus === "COMPLETED" && !order.completedAt) {
+    updateData.completedAt = new Date();
+  } else if (data.orderStatus === "CANCELED" && !order.canceledAt) {
+    updateData.canceledAt = new Date();
+  }
+
+  // 4. Hợp lệ thì tiến hành cập nhật DB
   const updatedOrder = await prisma.order.update({
     where: { id },
-    data: data,
+    data: updateData,
   });
 
   return updatedOrder;
@@ -296,6 +315,7 @@ const cancelMyOrder = async (id, customerId) => {
     data: {
       orderStatus: "CANCELED",
       cancelReason: "Khách hàng tự hủy đơn",
+      canceledAt: new Date(),
     },
   });
 

@@ -88,8 +88,12 @@ const updateOrderStatus = async (id, data) => {
   const updateData = { ...data };
   if (data.orderStatus === "SHIPPING" && !order.shippedAt) {
     updateData.shippedAt = new Date();
-  } else if (data.orderStatus === "COMPLETED" && !order.completedAt) {
-    updateData.completedAt = new Date();
+  } else if (data.orderStatus === "COMPLETED") {
+    if (!order.completedAt) {
+      updateData.completedAt = new Date();
+    }
+    // Nghiệp vụ: Giao hàng thành công / nhận tại showroom -> Tự động đánh dấu PAID
+    updateData.paymentStatus = "PAID";
   } else if (data.orderStatus === "CANCELED" && !order.canceledAt) {
     updateData.canceledAt = new Date();
   }
@@ -167,6 +171,8 @@ const createOrder = async (customerId, data) => {
 
     // 3 & 4. Tạo Order và Snapshot vào OrderDetail
     const orderCode = `ORD-${Date.now()}`;
+    // Nếu phương thức thanh toán là Online (PAYOS) thì ghi nhận PAID, còn lại (COD) là UNPAID
+    const initialPaymentStatus = data.paymentMethod === "PAYOS" ? "PAID" : "UNPAID";
     const newOrder = await tx.order.create({
       data: {
         orderCode: orderCode,
@@ -176,6 +182,7 @@ const createOrder = async (customerId, data) => {
         deliveryType: data.deliveryType,
         deliveryAddress: data.deliveryAddress,
         paymentMethod: data.paymentMethod,
+        paymentStatus: initialPaymentStatus,
         shippingFee: shippingFee,
         totalAmount: totalAmount,
         orderDetails: {

@@ -14,6 +14,8 @@
 | **#04** | Trưa 20/11/2026 (11:25) | `Chưa commit` | `src/modules/order/order.service.js`<br>`src/modules/order/order.controller.js`<br>`src/modules/order/order.route.js`<br>`src/modules/user/user.service.js` | Cung cấp endpoint tổng hợp Dashboard (`GET /orders/admin/stats`); gỡ bỏ rào cản tìm kiếm để phân trang người dùng mặc định và trích xuất `phone`, `address`, `accumulatedSpend`, `recentOrder` mà không cần sửa Schema DB. | Đã triển khai & xác thực |
 | **#05** | Chiều 20/11/2026 (14:50) | `Chưa commit` | `prisma/schema.prisma`<br>`src/modules/return/`<br>`src/modules/order/order.service.js` | Chuẩn hóa cơ chế Duyệt đổi trả hàng & Sổ cái hoàn tiền (Immutable Refund Ledger): Bổ sung `APPROVED`/`REJECTED`, kích hoạt `Refund` (cơ chế INSERT INTO dòng tiền âm, không sửa Order cũ), cập nhật công thức tính doanh thu thuần trên Dashboard. | Đã triển khai & xác thực |
 | **#06** | Chiều 20/11/2026 (17:00) | `Chưa commit` | `src/modules/order/order.service.js` | Đồng bộ vòng đời tồn kho (Inventory Atomic Management): Khóa chặn bán khống (Oversold Protection), tự động trừ kho nguyên tử (`decrement`) trong transaction khi đặt hàng và hoàn trả tồn kho (`increment`) khi khách hàng hoặc quản trị viên hủy đơn. | Đã triển khai & xác thực |
+| **#07** | Chiều 20/11/2026 (16:16) | `Chưa commit` | `scripts/sync_cloudinary_vases.js` | Đồng bộ 21 bình gốm thật từ Cloudinary, chuẩn hóa ảnh góc trước (`front.jpg`) làm cover, tịnh tiến mã B1-B21, nạp cờ `isReturnable = false`. | Đã triển khai & xác thực |
+| **#08** | Đêm 22/11/2026 (22:05) | `Chưa commit` | `src/modules/order/order.service.js` | Đồng bộ trường `isReturnable` của sản phẩm vào quan hệ `orderDetails` trong 4 hàm truy vấn (`getAllOrders`, `getOrderDetail`, `getMyOrders`, `getMyOrderDetail`), khắc phục lỗi UI cho phép bấm đổi trả tác phẩm không hỗ trợ đổi trả. | Đã triển khai & xác thực |
 
 ---
 
@@ -280,6 +282,35 @@ Bộ kịch bản kiểm thử tự động gồm **29 ca kiểm thử** bao ph�
 7. **Module 7: Quy trình Đổi trả & Sổ cái hoàn tiền (Return & Refund)**: Tra cứu đơn hàng (`GET /returns/order-lookup/:code`), tạo phiếu yêu cầu trả hàng, Staff duyệt hoàn tiền (+250.000đ vào bảng `Refund`), xác minh tính bất biến của Order (không bị đổi status hay trừ tiền gốc), phòng thủ chặn duyệt lại phiếu đã duyệt (400 Bad Request). (5/5 PASSED)
 8. **Module 8: Thống kê Dashboard (Stats)**: Tính toán doanh thu tuần theo công thức dòng tiền chuẩn: $\text{netRevenue} = \text{grossRevenue} - \text{totalRefunded}$. (2/2 PASSED)
 * **Tổng kết:** **29/29 PASSED (100% thành công)**.
+
+---
+
+### 2.8. ĐỢT #08: BỔ SUNG TRƯỜNG `isReturnable` CỦA SẢN PHẨM VÀO TRUY VẤN ĐƠN HÀNG (`order.service.js`)
+* **Thời điểm cập nhật:** 22:05 22/11/2026
+* **Mã commit:** `Chưa commit`
+* **Files ảnh hưởng:** `src/modules/order/order.service.js` (các hàm: `getAllOrders`, `getOrderDetail`, `getMyOrders`, `getMyOrderDetail`)
+
+#### A. Vấn đề nghiệp vụ trước khi cập nhật
+- Trong bảng dữ liệu `Product`, cờ `isReturnable` (boolean) quyết định sản phẩm/tác phẩm đó có được phép gửi yêu cầu đổi trả sau khi nhận hàng hay không (ví dụ các mẻ nung hỏa biến, tác phẩm độc bản có `isReturnable = false`).
+- Tuy nhiên, trong `order.service.js`, các hàm truy vấn đơn hàng (`getAllOrders`, `getOrderDetail`, `getMyOrders`, `getMyOrderDetail`) khi include danh sách `orderDetails` chỉ kéo `variant` và `review`, hoàn toàn thiếu quan hệ `product`.
+- Hệ quả: Dữ liệu trả về cho Frontend có `detail.product = undefined`. Khi Frontend thực hiện kiểm tra `detail.product?.isReturnable !== false`, kết quả luôn là `true` do `undefined !== false`, dẫn tới việc các đơn hàng chứa sản phẩm không hỗ trợ đổi trả vẫn hiển thị nút "Yêu cầu trả hàng", và trang tạo phiếu đổi trả vẫn cho phép chọn tác phẩm đó.
+
+#### B. Giải pháp kỹ thuật triển khai trong `order.service.js`
+Bổ sung khai báo include quan hệ `product` với trường `isReturnable` và tên sản phẩm trong `orderDetails`:
+```javascript
+orderDetails: {
+  include: {
+    product: { select: { id: true, name: true, isReturnable: true } },
+    review: true,
+    variant: { ... }
+  }
+}
+```
+Áp dụng đồng bộ cho cả 4 hàm truy vấn đơn hàng (cho cả quản trị viên và khách hàng).
+
+#### C. Hiệu quả đạt được
+- Dữ liệu đơn hàng phản ánh chính xác trạng thái hỗ trợ đổi trả của từng dòng sản phẩm.
+- Frontend có đủ dữ liệu để ẩn nút "Yêu cầu trả hàng" với các đơn không có sản phẩm đổi trả, và khóa lựa chọn sản phẩm trên form tạo ticket đổi trả.
 
 ---
 

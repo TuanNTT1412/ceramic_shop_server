@@ -8,6 +8,7 @@ const getAllOrders = async () => {
       customer: { select: { name: true, email: true } },
       orderDetails: {
         include: {
+          product: { select: { id: true, name: true, isReturnable: true } },
           variant: {
             include: {
               images: {
@@ -34,6 +35,7 @@ const getOrderDetail = async (id) => {
       customer: { select: { name: true, email: true } },
       orderDetails: {
         include: {
+          product: { select: { id: true, name: true, isReturnable: true } },
           variant: {
             include: {
               images: {
@@ -329,6 +331,7 @@ const getMyOrders = async (userId, query = {}) => {
       include: {
         orderDetails: {
           include: {
+            product: { select: { id: true, name: true, isReturnable: true } },
             review: true,
             variant: {
               include: {
@@ -365,6 +368,7 @@ const getMyOrderDetail = async (userId, orderId) => {
     include: {
       orderDetails: {
         include: {
+          product: { select: { id: true, name: true, isReturnable: true } },
           review: true,
           variant: {
             include: {

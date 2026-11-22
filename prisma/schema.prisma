@@ -259,6 +259,8 @@ enum ReturnStatus {
   DRAFT_INSPECTING       // Khách đang quét QR chụp ảnh & AI tính toán
   CANCELLED_BY_CUSTOMER  // Khách xem mức AI xong bấm Không đồng ý (Dừng lại)
   TICKET_SUBMITTED       // Khách Đồng ý -> Đã nộp ticket cho shop
+  APPROVED               // Nhân viên duyệt chấp thuận hoàn tiền
+  REJECTED               // Nhân viên từ chối yêu cầu
 //   WAITING_FOR_PICKUP     // Chờ shipper qua lấy hàng
 //   WAREHOUSE_INSPECTING   // Hàng về kho, nhân viên đang kiểm tra thực tế
 //   RETURNING_TO_CUSTOMER  // Khách không chịu kết quả kho -> Shop gửi trả bình lại cho khách
@@ -299,13 +301,18 @@ model ReturnRequest {
   customerNote          String?                @db.Text
   status                ReturnStatus           @default(DRAFT_INSPECTING)
   
+  // Ghi vết kiểm toán khi nhân viên duyệt
+  reviewedBy            String?                // ID của Staff/Admin duyệt
+  reviewedAt            DateTime?              // Thời điểm duyệt
+  adminNote             String?   @db.Text     // Ghi chú duyệt hoặc lý do từ chối
+  
   createdAt             DateTime               @default(now())
   updatedAt             DateTime               @updatedAt
 
-  // Quan hệ 1-1 với 3 thực thể con sinh ra theo tiến trình
+  // Quan hệ 1-1 với các thực thể con
   aiInspection          AiInspection?
+  refund                Refund?
   // warehouseVerification WarehouseVerification?
-  // refund                Refund?
 }
 
 // 2. Giám định AI ban đầu (Sinh ra khi khách quét QR & chụp ảnh xong)
@@ -346,21 +353,16 @@ model AiInspection {
 //   verifiedAt            DateTime              @default(now())
 // }
 // 
-// 4. Giao dịch hoàn tiền (CHỈ sinh ra khi khách chọn ACCEPT_REFUND)
-// model Refund {
-//   id                    String        @id @default(uuid())
-//   returnRequestId       String        @unique
-//   returnRequest         ReturnRequest @relation(fields: [returnRequestId], references: [id], onDelete: Cascade)
-//   
-//   customerBankQrUrl     String?       // Ảnh QR ngân hàng của khách
-//   customerBankName      String?       // "Vietcombank"
-//   customerAccountNumber String?       // "001100..."
-//   customerAccountName   String?       // "NGUYEN VAN A"
-//   
-//   refundAmount          Int           // Số tiền thực tế shop đã chuyển
-//   proofImageUrl         String        // Ảnh chụp màn hình bill chuyển khoản của shop
-//   transferredAt         DateTime      @default(now())
-//   performedBy           String        // ID admin/kế toán chuyển tiền
-// }
+// 4. Giao dịch hoàn tiền (Sinh ra khi nhân viên bấm APPROVED - Ghi vết dòng tiền âm)
+model Refund {
+  id                    String        @id @default(uuid())
+  returnRequestId       String        @unique
+  returnRequest         ReturnRequest @relation(fields: [returnRequestId], references: [id], onDelete: Cascade)
+  
+  refundAmount          Int           // Số tiền thực tế shop hoàn trả
+  adminNote             String?       @db.Text // Ghi chú hoàn tiền
+  performedBy           String        // ID admin/staff duyệt hoàn
+  createdAt             DateTime      @default(now()) // Thời điểm ghi nhận dòng tiền âm
+}
 
 // tinh duong chim bay de 2 option shop lay hoac ben thu 3

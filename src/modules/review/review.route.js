@@ -18,9 +18,9 @@ const router = express.Router({ mergeParams: true }); // mergeParams để nhậ
 router.get("/", reviewController.getReviews);
 
 // ==========================================
-// NHÓM 2: DÀNH CHO CUSTOMER
+// NHÓM 2: DÀNH CHO CUSTOMER (VÀ ADMIN/STAFF MUA HÀNG KIỂM THỬ)
 // ==========================================
-const customerAuth = [authenticate, authorize(Role.CUSTOMER)];
+const customerAuth = [authenticate, authorize(Role.CUSTOMER, Role.ADMIN, Role.STAFF)];
 
 // Khách hàng gửi đánh giá
 router.post(
@@ -28,6 +28,14 @@ router.post(
   customerAuth,
   validate(reviewValidation.createMyReviewSchema),
   reviewController.createMyReview
+);
+
+// Khách hàng chỉnh sửa đánh giá
+router.put(
+  "/:id",
+  customerAuth,
+  validate(reviewValidation.updateMyReviewSchema),
+  reviewController.updateMyReview
 );
 
 // ==========================================

@@ -65,13 +65,43 @@ const changePasswordUser = async (userId, currentPassword, newPassword) => {
 };
 
 const getUserAddresses = async (userId) => {
-    return await prisma.userAddress.findMany({
+    const addresses = await prisma.userAddress.findMany({
         where: { userId },
         orderBy: [
             { isDefault: 'desc' },
             { createdAt: 'desc' }
         ]
     });
+
+    // Nếu sổ địa chỉ rỗng, tự động truy hồi địa chỉ từ đơn hàng gần nhất (nếu có)
+    if (addresses.length === 0) {
+        try {
+            const lastOrder = await prisma.order.findFirst({
+                where: {
+                    customerId: userId,
+                    deliveryAddress: { not: null }
+                },
+                orderBy: { createdAt: 'desc' }
+            });
+
+            if (lastOrder && lastOrder.deliveryAddress && lastOrder.deliveryAddress.trim()) {
+                const autoSaved = await prisma.userAddress.create({
+                    data: {
+                        userId,
+                        receiverName: lastOrder.receiverName || 'Quý khách',
+                        receiverPhone: lastOrder.receiverPhone || '',
+                        addressDetail: lastOrder.deliveryAddress.trim(),
+                        isDefault: true
+                    }
+                });
+                return [autoSaved];
+            }
+        } catch (err) {
+            console.warn('Lỗi tự động phục hồi UserAddress từ đơn hàng cũ:', err?.message);
+        }
+    }
+
+    return addresses;
 }   
 
 const createUserAddress = async (userId, data) => {
@@ -148,27 +178,13 @@ const setDefaultUserAddress = async (userId, addressId) => {
 // DÀNH CHO ADMIN
 // ==========================================
 
-// 1. Tra cứu danh sách người dùng (Search-first: Phải có tìm kiếm hoặc lọc mới hiện)
+// 1. Tra cứu danh sách người dùng quản trị (Hỗ trợ phân trang, tìm kiếm và thống kê thực tế)
 const getUsersForAdmin = async (query = {}) => {
     const { search, role, isActive } = query;
 
     const hasSearch = search && search.trim() !== "";
     const hasRole = Boolean(role);
     const hasStatus = isActive !== undefined && isActive !== null && isActive !== "";
-
-    // Nếu không có bất kỳ tiêu chí tìm kiếm hoặc bộ lọc nào -> Trả về rỗng để tối ưu hiệu năng
-    if (!hasSearch && !hasRole && !hasStatus) {
-        return {
-            users: [],
-            pagination: {
-                page: 1,
-                limit: 10,
-                total: 0,
-                totalPages: 0,
-            },
-            message: "Vui lòng nhập từ khóa tìm kiếm (tên, email) hoặc chọn bộ lọc để tra cứu người dùng",
-        };
-    }
 
     const page = Math.max(parseInt(query.page, 10) || 1, 1);
     const limit = Math.max(parseInt(query.limit, 10) || 10, 1);
@@ -207,13 +223,95 @@ const getUsersForAdmin = async (query = {}) => {
                 isActive: true,
                 createdAt: true,
                 updatedAt: true,
+                addresses: {
+                    select: {
+                        receiverPhone: true,
+                        addressDetail: true,
+                        isDefault: true,
+                    },
+                    orderBy: { isDefault: "desc" },
+                    take: 1,
+                },
+                orders: {
+                    select: {
+                        id: true,
+                        totalAmount: true,
+                        orderStatus: true,
+                        createdAt: true,
+                        orderDetails: {
+                            take: 1,
+                            select: {
+                                classification: true,
+                                variant: {
+                                    select: {
+                                        variantName: true,
+                                        product: { select: { name: true } },
+                                        images: { take: 1, select: { imageUrl: true } },
+                                    },
+                                },
+                            },
+                        },
+                    },
+                    orderBy: { createdAt: "desc" },
+                },
+                _count: {
+                    select: {
+                        orders: true,
+                        reviews: true,
+                        addresses: true,
+                    },
+                },
             },
         }),
         prisma.user.count({ where }),
     ]);
 
+    const formattedUsers = users.map((u) => {
+        const primaryAddress = u.addresses?.[0] || null;
+        const recentOrderRaw = u.orders?.[0] || null;
+
+        // Tính tổng chi tiêu của các đơn hoàn tất/đã thanh toán
+        const accumulatedSpend = (u.orders || []).reduce((sum, ord) => {
+            const isCompleted = ord.orderStatus === "DELIVERED" || ord.orderStatus === "COMPLETED";
+            return isCompleted ? sum + (ord.totalAmount || 0) : sum;
+        }, 0);
+
+        let recentOrder = null;
+        if (recentOrderRaw) {
+            const firstDetail = recentOrderRaw.orderDetails?.[0] || null;
+            const productName = firstDetail?.variant?.product?.name || "Tác phẩm gốm sứ nghệ thuật";
+            const spec = firstDetail?.variant?.variantName || firstDetail?.classification || "Tiêu chuẩn";
+            const image = firstDetail?.variant?.images?.[0]?.imageUrl || "/images/hero-vase.jpg";
+
+            recentOrder = {
+                code: `#ORD-${recentOrderRaw.id.slice(-6).toUpperCase()}`,
+                status: recentOrderRaw.orderStatus === "COMPLETED" ? "Đã hoàn tất" : recentOrderRaw.orderStatus,
+                productName,
+                spec,
+                amount: recentOrderRaw.totalAmount,
+                image,
+            };
+        }
+
+        return {
+            id: u.id,
+            name: u.name,
+            email: u.email,
+            phone: primaryAddress?.receiverPhone || null,
+            role: u.role,
+            avatar: u.avatar,
+            isActive: u.isActive,
+            createdAt: u.createdAt,
+            updatedAt: u.updatedAt,
+            address: primaryAddress?.addressDetail || null,
+            accumulatedSpend,
+            recentOrder,
+            _count: u._count,
+        };
+    });
+
     return {
-        users,
+        users: formattedUsers,
         pagination: {
             page,
             limit,

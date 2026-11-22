@@ -15,6 +15,9 @@ dist/
 build/
 .npm/
 
+backup_*.json
+*.json.bak
+
 .claude/
 .cursor/
 .agents/

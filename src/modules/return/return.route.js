@@ -45,6 +45,12 @@ router.get("/admin", optionalAuth, returnController.getAllReturns);
 // 2. Staff xem chi tiết 1 phiếu trả hàng (kèm ảnh 4 góc AI chụp)
 router.get("/admin/:id", optionalAuth, returnController.getReturnDetail);
 
+// 3. Staff duyệt chấp thuận yêu cầu trả hàng (APPROVED -> INSERT INTO Refund)
+router.patch("/admin/:id/approve", optionalAuth, returnController.approveReturn);
+
+// 4. Staff từ chối yêu cầu trả hàng (REJECTED)
+router.patch("/admin/:id/reject", optionalAuth, returnController.rejectReturn);
+
 // ==========================================
 // NHÓM 2: DÀNH CHO CUSTOMER & PORTAL
 // ==========================================

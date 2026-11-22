@@ -124,12 +124,25 @@ const cancelMyOrder = async (req, res, next) => {
   }
 };
 
+const getDashboardStats = async (req, res, next) => {
+  try {
+    const stats = await orderService.getDashboardStats();
+    res.status(200).json({
+      success: true,
+      data: stats,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   // Admin
   getAllOrders,
   getOrderDetail,
   updateOrderStatus,
   updatePaymentStatus,
+  getDashboardStats,
   // Customer
   createOrder,
   getMyOrders,

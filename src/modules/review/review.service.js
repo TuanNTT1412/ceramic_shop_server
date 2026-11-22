@@ -136,8 +136,45 @@ const replyReviewForAdmin = async (reviewId, adminReply) => {
   return updated;
 };
 
+const updateMyReview = async (userId, reviewId, data) => {
+  const { rating, comment, images } = data;
+
+  const existing = await prisma.review.findUnique({
+    where: { id: reviewId },
+  });
+
+  if (!existing) {
+    const error = new Error("Không tìm thấy đánh giá");
+    error.status = 404;
+    throw error;
+  }
+
+  if (existing.userId !== userId) {
+    const error = new Error("Bạn không có quyền chỉnh sửa đánh giá này");
+    error.status = 403;
+    throw error;
+  }
+
+  const updated = await prisma.review.update({
+    where: { id: reviewId },
+    data: {
+      ...(rating !== undefined && { rating }),
+      ...(comment !== undefined && { comment }),
+      ...(images !== undefined && { images }),
+      updatedAt: new Date(),
+    },
+    include: {
+      user: { select: { id: true, name: true, avatar: true } },
+      orderDetail: { select: { classification: true } },
+    },
+  });
+
+  return updated;
+};
+
 module.exports = {
   createMyReview,
+  updateMyReview,
   getReviews,
   replyReviewForAdmin,
 };

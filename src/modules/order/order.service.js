@@ -99,12 +99,32 @@ const updateOrderStatus = async (id, data) => {
   }
 
   // 4. Hợp lệ thì tiến hành cập nhật DB
-  const updatedOrder = await prisma.order.update({
-    where: { id },
-    data: updateData,
-  });
+  return await prisma.$transaction(async (tx) => {
+    const updatedOrder = await tx.order.update({
+      where: { id },
+      data: updateData,
+    });
 
-  return updatedOrder;
+    // Nếu đơn hàng bị hủy (CANCELED), hoàn trả tồn kho nếu trước đó chưa ở trạng thái CANCELED
+    if (data.orderStatus === "CANCELED" && order.orderStatus !== "CANCELED") {
+      if (order.orderDetails && order.orderDetails.length > 0) {
+        for (const detail of order.orderDetails) {
+          if (detail.variantId) {
+            await tx.productVariant.update({
+              where: { id: detail.variantId },
+              data: {
+                stockQuantity: {
+                  increment: detail.quantity,
+                },
+              },
+            });
+          }
+        }
+      }
+    }
+
+    return updatedOrder;
+  });
 };
 
 const updatePaymentStatus = async (id, paymentStatus) => {
@@ -144,12 +164,27 @@ const createOrder = async (customerId, data) => {
       throw error;
     }
 
-    // 2. Tính toán tiền từ DB để chống fake giá từ frontend
+    // 2. Kiểm tra tồn kho & Tính toán tiền từ DB để chống fake giá từ frontend
     let totalAmount = 0;
     const orderDetailsData = [];
 
     for (const item of cart.cartItems) {
       const variant = item.variant;
+      if (!variant) {
+        const error = new Error("Phân loại sản phẩm không tồn tại");
+        error.status = 404;
+        throw error;
+      }
+
+      // Kiểm tra tồn kho nghiêm ngặt
+      if (variant.stockQuantity < item.quantity || variant.stockQuantity <= 0) {
+        const error = new Error(
+          `Tác phẩm '${variant.product.name}' chỉ còn ${variant.stockQuantity} sản phẩm trong kho, không đủ số lượng để đặt hàng.`
+        );
+        error.status = 400;
+        throw error;
+      }
+
       const unitPrice = variant.price;
       const subTotal = unitPrice * item.quantity;
       totalAmount += subTotal;
@@ -192,7 +227,50 @@ const createOrder = async (customerId, data) => {
       include: { orderDetails: true },
     });
 
-    // 5. Xóa sạch item trong giỏ hàng (giữ lại vỏ Cart)
+    // 5. Cập nhật giảm tồn kho cho từng biến thể một cách an toàn (Atomic decrement)
+    for (const item of cart.cartItems) {
+      await tx.productVariant.update({
+        where: { id: item.variantId },
+        data: {
+          stockQuantity: {
+            decrement: item.quantity,
+          },
+        },
+      });
+    }
+
+    // 5. Tự động lưu địa chỉ giao hàng vào Sổ địa chỉ (UserAddress) nếu chưa tồn tại
+    if (data.deliveryType === "SHIPPING" && data.deliveryAddress && data.deliveryAddress.trim()) {
+      try {
+        const trimmedAddress = data.deliveryAddress.trim();
+        const existingAddress = await tx.userAddress.findFirst({
+          where: {
+            userId: customerId,
+            addressDetail: trimmedAddress,
+          },
+        });
+
+        if (!existingAddress) {
+          const count = await tx.userAddress.count({
+            where: { userId: customerId },
+          });
+
+          await tx.userAddress.create({
+            data: {
+              userId: customerId,
+              receiverName: data.receiverName || "Quý khách",
+              receiverPhone: data.receiverPhone || "",
+              addressDetail: trimmedAddress,
+              isDefault: count === 0, // Địa chỉ đầu tiên sẽ là mặc định
+            },
+          });
+        }
+      } catch (addrErr) {
+        console.warn("Không thể tự động lưu UserAddress khi tạo đơn:", addrErr?.message);
+      }
+    }
+
+    // 6. Xóa sạch item trong giỏ hàng (giữ lại vỏ Cart)
     await tx.cartItem.deleteMany({
       where: { cartId: cart.id },
     });
@@ -251,6 +329,7 @@ const getMyOrders = async (userId, query = {}) => {
       include: {
         orderDetails: {
           include: {
+            review: true,
             variant: {
               include: {
                 images: {
@@ -286,6 +365,7 @@ const getMyOrderDetail = async (userId, orderId) => {
     include: {
       orderDetails: {
         include: {
+          review: true,
           variant: {
             include: {
               images: true,
@@ -317,18 +397,118 @@ const cancelMyOrder = async (id, customerId) => {
     throw error;
   }
 
-  const updatedOrder = await prisma.order.update({
-    where: { id },
-    data: {
-      orderStatus: "CANCELED",
-      cancelReason: "Khách hàng tự hủy đơn",
-      canceledAt: new Date(),
-    },
+  return await prisma.$transaction(async (tx) => {
+    const updatedOrder = await tx.order.update({
+      where: { id },
+      data: {
+        orderStatus: "CANCELED",
+        cancelReason: "Khách hàng tự hủy đơn",
+        canceledAt: new Date(),
+      },
+    });
+
+    // Cộng hoàn trả lại số lượng tồn kho tương ứng
+    if (order.orderDetails && order.orderDetails.length > 0) {
+      for (const detail of order.orderDetails) {
+        if (detail.variantId) {
+          await tx.productVariant.update({
+            where: { id: detail.variantId },
+            data: {
+              stockQuantity: {
+                increment: detail.quantity,
+              },
+            },
+          });
+        }
+      }
+    }
+
+    return updatedOrder;
   });
+};
 
-  // Tương lai: Gọi hàm cộng lại tồn kho ở đây
+// ==========================================
+// THỐNG KÊ TỔNG QUAN HỆ THỐNG (DASHBOARD STATS)
+// ==========================================
+const getDashboardStats = async () => {
+  const oneWeekAgo = new Date();
+  oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
 
-  return updatedOrder;
+  const [
+    totalOrders,
+    pendingOrders,
+    shippingOrders,
+    pickupOrders,
+    completedOrders,
+    revenueThisWeekAgg,
+    refundThisWeekAgg,
+    totalProducts,
+    activeProducts,
+    totalCategories,
+    totalReviews,
+    totalUsers,
+    recentOrders,
+  ] = await Promise.all([
+    prisma.order.count(),
+    prisma.order.count({ where: { orderStatus: "PENDING" } }),
+    prisma.order.count({ where: { orderStatus: "SHIPPING" } }),
+    prisma.order.count({ where: { deliveryType: "PICKUP" } }),
+    prisma.order.count({ where: { orderStatus: "COMPLETED" } }),
+    prisma.order.aggregate({
+      _sum: { totalAmount: true },
+      where: {
+        createdAt: { gte: oneWeekAgo },
+        OR: [
+          { orderStatus: "COMPLETED" },
+          { paymentStatus: "PAID" },
+        ],
+      },
+    }),
+    prisma.refund.aggregate({
+      _sum: { refundAmount: true },
+      where: {
+        createdAt: { gte: oneWeekAgo },
+      },
+    }),
+    prisma.product.count(),
+    prisma.product.count({ where: { isActive: true } }),
+    prisma.category.count(),
+    prisma.review.count(),
+    prisma.user.count(),
+    prisma.order.findMany({
+      take: 5,
+      orderBy: { createdAt: "desc" },
+      select: {
+        id: true,
+        receiverName: true,
+        totalAmount: true,
+        orderStatus: true,
+        createdAt: true,
+        customer: { select: { name: true } },
+      },
+    }),
+  ]);
+
+  const grossRevenue = revenueThisWeekAgg._sum?.totalAmount || 0;
+  const totalRefunded = refundThisWeekAgg._sum?.refundAmount || 0;
+  const netRevenue = Math.max(0, grossRevenue - totalRefunded);
+
+  return {
+    revenueThisWeek: netRevenue,
+    grossRevenueThisWeek: grossRevenue,
+    refundThisWeek: totalRefunded,
+    totalOrders,
+    completedOrders,
+    pendingOrders,
+    shippingOrders,
+    pickupOrders,
+    totalProducts,
+    activeProducts,
+    totalCategories,
+    totalReviews,
+    totalUsers,
+    recentOrders,
+  };
 };
 
 module.exports = {
@@ -337,6 +517,7 @@ module.exports = {
   getOrderDetail,
   updateOrderStatus,
   updatePaymentStatus,
+  getDashboardStats,
   // Customer
   createOrder,
   getMyOrders,

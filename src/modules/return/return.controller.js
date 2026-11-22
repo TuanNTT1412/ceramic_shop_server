@@ -30,6 +30,36 @@ const getReturnDetail = async (req, res, next) => {
   }
 };
 
+// Staff duyệt yêu cầu trả hàng (APPROVED) -> INSERT INTO Refund
+const approveReturn = async (req, res, next) => {
+  try {
+    const staffId = req.user?.userId || req.user?.id || 'STAFF_DIRECT';
+    const result = await returnService.approveReturn(req.params.id, staffId, req.body);
+    res.status(200).json({
+      success: true,
+      message: result.message,
+      data: result,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Staff từ chối yêu cầu trả hàng (REJECTED)
+const rejectReturn = async (req, res, next) => {
+  try {
+    const staffId = req.user?.userId || req.user?.id || 'STAFF_DIRECT';
+    const result = await returnService.rejectReturn(req.params.id, staffId, req.body);
+    res.status(200).json({
+      success: true,
+      message: result.message,
+      data: result,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 // // Staff cập nhật trạng thái tiến độ (TẠM ĐÓNG)
 // const updateReturnStatus = async (req, res, next) => {
 //   try {
@@ -204,9 +234,11 @@ const lookupOrderByCode = async (req, res, next) => {
 
 module.exports = {
   lookupOrderByCode,
-  // Admin / Staff (Chỉ xem)
+  // Admin / Staff
   getAllReturns,
   getReturnDetail,
+  approveReturn,
+  rejectReturn,
   // updateReturnStatus,
   // verifyWarehouse,
   // completeRefund,

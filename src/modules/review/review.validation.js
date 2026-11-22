@@ -28,7 +28,30 @@ const createMyReviewSchema = z.object({
     .default([]),
 });
 
-// 2. Kiểm tra khi Admin/Staff phản hồi đánh giá
+// 2. Kiểm tra khi Khách hàng chỉnh sửa đánh giá
+const updateMyReviewSchema = z.object({
+  rating: z
+    .number({
+      invalid_type_error: "Số sao phải là số",
+    })
+    .int("Số sao phải là số nguyên")
+    .min(1, "Phải đánh giá ít nhất 1 sao")
+    .max(5, "Số sao tối đa là 5")
+    .optional(),
+
+  comment: z
+    .string()
+    .max(500, "Nội dung đánh giá tối đa 500 ký tự")
+    .optional()
+    .nullable(),
+
+  images: z
+    .array(z.string().url("Mỗi ảnh phải là một URL hợp lệ"))
+    .max(5, "Chỉ được tải lên tối đa 5 ảnh")
+    .optional(),
+});
+
+// 3. Kiểm tra khi Admin/Staff phản hồi đánh giá
 const replyReviewSchema = z.object({
   adminReply: z
     .string({ required_error: "Nội dung phản hồi là bắt buộc" })
@@ -38,5 +61,6 @@ const replyReviewSchema = z.object({
 
 module.exports = {
   createMyReviewSchema,
+  updateMyReviewSchema,
   replyReviewSchema,
 };

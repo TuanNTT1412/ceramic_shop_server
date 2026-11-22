@@ -19,6 +19,25 @@ const createMyReview = async (req, res, next) => {
   }
 };
 
+const updateMyReview = async (req, res, next) => {
+  try {
+    const userId = req.user.userId || req.user.id;
+    const review = await reviewService.updateMyReview(
+      userId,
+      req.params.id,
+      req.body
+    );
+
+    res.status(200).json({
+      success: true,
+      message: "Cập nhật đánh giá thành công",
+      data: review,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 // ==========================================
 // PUBLIC
 // ==========================================
@@ -62,6 +81,7 @@ const replyReviewForAdmin = async (req, res, next) => {
 
 module.exports = {
   createMyReview,
+  updateMyReview,
   getReviews,
   replyReviewForAdmin,
 };

@@ -275,7 +275,32 @@ const getProductDetail = async (productId) => {
         throw error;
     }
 
-    return product;
+    // 1. Thống kê đánh giá thực tế của sản phẩm
+    const reviewStats = await prisma.review.aggregate({
+        where: { productId },
+        _count: { id: true },
+        _avg: { rating: true }
+    });
+
+    // 2. Thống kê tổng số lượng đã bán từ các đơn hàng hoàn thành (COMPLETED)
+    const soldStats = await prisma.orderDetail.aggregate({
+        where: {
+            productId,
+            order: {
+                orderStatus: 'COMPLETED'
+            }
+        },
+        _sum: {
+            quantity: true
+        }
+    });
+
+    return {
+        ...product,
+        reviewsCount: reviewStats._count?.id || 0,
+        rating: reviewStats._avg?.rating ? Number(reviewStats._avg.rating.toFixed(1)) : 0,
+        soldCount: soldStats._sum?.quantity || 0
+    };
 };
 // 8.Dành cho admin và staff: Xem tất cả sản phẩm 
 const getProductsForAdmin = async (query) => {

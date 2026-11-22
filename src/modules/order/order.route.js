@@ -12,6 +12,7 @@ const router = express.Router();
 // ==========================================
 const adminAuth = [authenticate, authorize(Role.STAFF, Role.ADMIN)];
 
+router.get("/admin/stats", adminAuth, orderController.getDashboardStats);
 router.get("/admin", adminAuth, orderController.getAllOrders);
 router.get("/admin/:id", adminAuth, orderController.getOrderDetail);
 
@@ -30,9 +31,9 @@ router.patch(
 );
 
 // ==========================================
-// NHÓM 2: DÀNH CHO CUSTOMER (KHÁCH HÀNG)
+// NHÓM 2: DÀNH CHO CUSTOMER (VÀ ADMIN/STAFF MUA HÀNG KIỂM THỬ)
 // ==========================================
-const customerAuth = [authenticate, authorize(Role.CUSTOMER)];
+const customerAuth = [authenticate, authorize(Role.CUSTOMER, Role.ADMIN, Role.STAFF)];
 
 // Khách hàng đặt đơn mới
 router.post(

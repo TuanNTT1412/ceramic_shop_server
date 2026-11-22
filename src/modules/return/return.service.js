@@ -459,8 +459,7 @@ const getAllReturns = async (query = {}) => {
         select: { productName: true, unitPrice: true, quantity: true },
       },
       aiInspection: true,
-      // warehouseVerification: true,
-      // refund: true,
+      refund: true,
     },
     orderBy: { createdAt: "desc" },
   });
@@ -483,8 +482,7 @@ const getReturnDetail = async (id) => {
         },
       },
       aiInspection: true,
-      // warehouseVerification: true,
-      // refund: true,
+      refund: true,
     },
   });
 
@@ -495,6 +493,99 @@ const getReturnDetail = async (id) => {
   }
 
   return returnRequest;
+};
+
+/**
+ * 9. Staff duyệt yêu cầu trả hàng (APPROVED) -> INSERT INTO bảng Refund (Ghi vết dòng tiền âm)
+ */
+const approveReturn = async (id, staffId, data = {}) => {
+  const returnRequest = await getReturnDetail(id);
+
+  if (returnRequest.status === ReturnStatus.APPROVED) {
+    const error = new Error("Phiếu yêu cầu trả hàng này đã được duyệt trước đó");
+    error.status = 400;
+    throw error;
+  }
+
+  if (returnRequest.status === ReturnStatus.REJECTED) {
+    const error = new Error("Phiếu yêu cầu trả hàng này đã bị từ chối trước đó");
+    error.status = 400;
+    throw error;
+  }
+
+  // Xác định số tiền hoàn: Ưu tiên tiền truyền lên, hoặc lấy từ AiInspection, hoặc lấy toàn bộ giá trị orderDetail
+  const finalAmount = data.refundAmount !== undefined && data.refundAmount !== null
+    ? Number(data.refundAmount)
+    : (returnRequest.aiInspection?.estimatedRefundAmount || returnRequest.orderDetail?.subTotal || 0);
+
+  return await prisma.$transaction(async (tx) => {
+    // 1. Cập nhật trạng thái phiếu sang APPROVED
+    const updatedRequest = await tx.returnRequest.update({
+      where: { id },
+      data: {
+        status: ReturnStatus.APPROVED,
+        reviewedBy: staffId,
+        reviewedAt: new Date(),
+        adminNote: data.adminNote || "Đã duyệt yêu cầu hoàn trả",
+      },
+    });
+
+    // 2. INSERT INTO bảng Refund (Ghi vết dòng tiền âm, không sửa Order cũ)
+    const refundRecord = await tx.refund.upsert({
+      where: { returnRequestId: id },
+      update: {
+        refundAmount: finalAmount,
+        adminNote: data.adminNote || "Đã duyệt yêu cầu hoàn trả",
+        performedBy: staffId,
+        createdAt: new Date(),
+      },
+      create: {
+        returnRequestId: id,
+        refundAmount: finalAmount,
+        adminNote: data.adminNote || "Đã duyệt yêu cầu hoàn trả",
+        performedBy: staffId,
+        createdAt: new Date(),
+      },
+    });
+
+    return {
+      returnRequest: updatedRequest,
+      refund: refundRecord,
+      message: "Duyệt yêu cầu trả hàng và ghi nhận hoàn tiền thành công",
+    };
+  });
+};
+
+/**
+ * 10. Staff từ chối yêu cầu trả hàng (REJECTED)
+ */
+const rejectReturn = async (id, staffId, data = {}) => {
+  const returnRequest = await getReturnDetail(id);
+
+  if (returnRequest.status === ReturnStatus.APPROVED) {
+    const error = new Error("Phiếu yêu cầu này đã được duyệt, không thể từ chối");
+    error.status = 400;
+    throw error;
+  }
+
+  const updatedRequest = await prisma.returnRequest.update({
+    where: { id },
+    data: {
+      status: ReturnStatus.REJECTED,
+      reviewedBy: staffId,
+      reviewedAt: new Date(),
+      adminNote: data.adminNote || "Từ chối yêu cầu đổi trả",
+    },
+    include: {
+      aiInspection: true,
+      refund: true,
+    },
+  });
+
+  return {
+    returnRequest: updatedRequest,
+    message: "Đã từ chối yêu cầu trả hàng thành công",
+  };
 };
 
 /**
@@ -640,6 +731,8 @@ module.exports = {
   // Staff / Admin methods
   getAllReturns,
   getReturnDetail,
+  approveReturn,
+  rejectReturn,
   // updateReturnStatus,
   // verifyWarehouse,
   // completeRefund,
@@ -649,6 +742,8 @@ module.exports = {
   // submitCustomerFinalDecision: submitFinalDecision,
   getAllReturnRequestsForStaff: getAllReturns,
   getReturnDetailForStaff: getReturnDetail,
+  approveReturnForStaff: approveReturn,
+  rejectReturnForStaff: rejectReturn,
   // staffUpdateReturnStatus: updateReturnStatus,
   // submitWarehouseVerification: verifyWarehouse,
 };

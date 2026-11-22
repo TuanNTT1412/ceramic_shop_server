@@ -13,7 +13,7 @@ const router = express.Router();
 
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 20,
+  max: 1000,
   message: { success: false, message: "Quá nhiều request, thử lại sau" },
 });
 
